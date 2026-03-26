@@ -1,0 +1,266 @@
+Update the existing Mosaic Maker app with these Phase 1 + Phase 2 features. Do not redesign the app. Modify the current app cleanly and keep all existing functionality working.
+
+GOAL
+Add:
+1. Detail modes
+2. Full palette control from UI to backend
+3. Enable/disable individual colors
+4. Color families
+5. Family-aware color matching
+6. Contrast-based edge protection during cleanup
+7. Prepare the app structure so dithering can be added next, but do NOT implement dithering yet unless it is easy and does not destabilize the app
+
+IMPORTANT
+- Keep the app runnable
+- Do not break existing generate/export functionality
+- Do not remove current outputs
+- Keep performance reasonable
+- Make the smallest clean changes needed
+
+==================================================
+FEATURES TO ADD
+==================================================
+
+1. DETAIL MODE
+Replace the old numeric threshold UI/input with a mode selector.
+
+Modes:
+- detail
+- balanced
+- clean
+
+Map modes internally to thresholds:
+- detail = 4
+- balanced = 8
+- clean = 15
+
+Default = balanced
+
+The frontend should send:
+- mode
+
+The backend should convert mode to threshold internally.
+
+==================================================
+
+2. FULL PALETTE SENT FROM FRONTEND TO BACKEND
+Do not rely only on the hardcoded backend palette during generation.
+
+The frontend must send the full palette array with each request.
+Each palette item should include:
+- name
+- code
+- hex
+- enabled
+- family
+
+Example:
+{
+  "name": "Dark Red",
+  "code": "154",
+  "hex": "#8B1E1E",
+  "enabled": true,
+  "family": "red"
+}
+
+The backend should validate and use the incoming palette for generation.
+
+==================================================
+
+3. ENABLE / DISABLE COLORS IN UI
+Add a palette control panel in the frontend.
+
+Requirements:
+- Show all colors in the palette
+- Each color has a checkbox or toggle
+- User can enable/disable colors
+- The selected palette is sent to the backend
+- Preserve current default palette values on load
+
+Nice to have:
+- group colors by family in the UI
+- show a small color swatch next to each color name
+
+==================================================
+
+4. COLOR FAMILIES
+Add a family field to every palette color.
+
+Use these family values:
+- neutral
+- skin
+- brown
+- red
+- orange
+- yellow
+- green
+- blue
+- cyan
+- purple
+- pink
+- metallic
+
+Update the built-in palette so every color has a family.
+
+Suggested family mapping:
+- White, Light Grey, Light Bluish Gray, Dark Bluish Gray, Black Grey, Black => neutral
+- Tan, Dark Tan, Nougat, Medium Nougat, Light Nougat, Light Light Nougat, Apricot, Flesh Nougat => skin
+- Reddish Brown, Dark Brown => brown
+- Dark Red, Red, Coral => red
+- Peach Red, Dark Pink, Bright Pink, Magenta => pink
+- Yellow => yellow
+- Flame Yellowish Orange, Orange, Dark Orange => orange
+- Dark Green, Green, Bright Green, Yellowish Green, Olive Green, Sand Green => green
+- Dark Turquoise => cyan
+- Dark Blue, Blue, Dark Azure, Medium Blue, Bright Light Blue, Sand Blue => blue
+- Medium Azure, Light Aqua => cyan
+- Dark Purple, Purple, Medium Lavender, Lavender => purple
+- Gold, Pearl Gold => metallic
+
+==================================================
+
+5. FAMILY-AWARE COLOR MATCHING
+This is a major quality improvement.
+
+During initial color matching, do NOT let every color match to every other color blindly.
+
+Use a family compatibility map like this:
+
+neutral -> neutral
+skin -> skin, brown
+brown -> brown, skin, red
+red -> red, pink, orange, brown
+pink -> pink, red, purple
+orange -> orange, red, yellow
+yellow -> yellow, orange
+green -> green
+blue -> blue, cyan, purple
+cyan -> cyan, blue, green
+purple -> purple, pink, blue
+metallic -> metallic
+
+Implementation guidance:
+- First determine the nearest palette color globally by LAB distance
+- Then constrain or bias matches using the family compatibility rules
+- A practical approach is:
+  a. find the nearest color
+  b. get its family
+  c. only compare against colors in compatible families
+- Use this logic in BOTH:
+  1. initial image pixel mapping
+  2. threshold cleanup remapping
+
+This is to prevent bad substitutions like reds collapsing into browns too aggressively.
+
+==================================================
+
+6. CONTRAST-BASED EDGE PROTECTION
+Add an option:
+- protectEdges: boolean
+Default = true
+
+During threshold cleanup:
+- compute a simple contrast mask from the already resized image
+- if a pixel differs strongly from its neighbors, mark it as protected
+- protected pixels should not be aggressively remapped during threshold cleanup
+
+Simple implementation is fine:
+- compare pixel RGB or LAB to left/right/up/down neighbors
+- if contrast exceeds a threshold, mark protected
+
+Use edge protection only during cleanup, not during the initial mapping.
+
+Goal:
+- preserve face details
+- preserve text edges
+- preserve outlines and highlights
+
+==================================================
+
+7. REQUEST BODY SHAPE
+Update the frontend and backend so the request body includes:
+
+{
+  baseplateSize,
+  columns,
+  rows,
+  mode,
+  palette,
+  options: {
+    protectEdges: true,
+    dithering: false
+  }
+}
+
+Do not require a raw threshold input anymore.
+
+==================================================
+
+BACKEND CHANGES
+==================================================
+
+Update the mosaic generate route:
+- read mode, palette, and options from request body
+- convert mode to threshold using:
+  detail = 4
+  balanced = 8
+  clean = 15
+- validate palette is an array
+- pass palette and options into processImage
+
+Update processImage signature to accept:
+- threshold
+- palette
+- options
+
+Replace any direct reliance on the old hardcoded palette inside imageProcessing with the provided palette input, while still allowing the built-in palette to initialize the frontend defaults.
+
+Use family-aware matching for:
+- initial nearest color selection
+- threshold cleanup remapping
+
+Use contrast-based protection during cleanup.
+
+Keep the performance improvements already made:
+- precompute palette LAB
+- no repeated per-pixel hex conversions during cleanup
+- max cleanup passes = 5
+
+==================================================
+FRONTEND CHANGES
+==================================================
+
+Update the form UI to include:
+- mode selector (detail / balanced / clean)
+- palette panel with all colors and enabled toggles
+- protect edges toggle
+- keep existing baseplate size, columns, rows, image upload
+
+Default values:
+- mode = balanced
+- protectEdges = true
+- dithering = false
+
+The frontend should send the full palette and options to the backend.
+
+==================================================
+IMPORTANT IMPLEMENTATION NOTES
+==================================================
+
+- Keep the built-in palette as the starting/default palette
+- Add family to the built-in palette data
+- Do not remove current exports or previews
+- Do not add a database
+- Do not add accounts or project saving
+- Keep the app stable and working
+- Make clean changes in the existing codebase
+
+==================================================
+WHAT TO SHOW ME WHEN DONE
+==================================================
+
+When finished, summarize:
+1. which files were changed
+2. what was added
+3. whether the app is running
+4. any follow-up fixes still recommended
