@@ -3,14 +3,17 @@ info:
   title: Api
   version: 0.1.0
   description: API specification
+
 servers:
   - url: /api
     description: Base API path
+
 tags:
   - name: health
     description: Health operations
   - name: mosaic
     description: Mosaic generation operations
+
 paths:
   /healthz:
     get:
@@ -25,6 +28,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
   /mosaic/generate:
     post:
       operationId: generateMosaic
@@ -54,9 +58,57 @@ paths:
                 rows:
                   type: integer
                   description: Number of baseplate rows
-                threshold:
-                  type: integer
-                  description: Minimum color usage threshold (default 10)
+
+                mode:
+                  type: string
+                  description: Detail mode
+                  enum:
+                    - detail
+                    - balanced
+                    - clean
+                  default: balanced
+
+                protectEdges:
+                  type: boolean
+                  description: Protect high-contrast edges during cleanup
+                  default: true
+
+                palette:
+                  type: array
+                  description: Full palette sent from frontend
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      code:
+                        type: string
+                      hex:
+                        type: string
+                      enabled:
+                        type: boolean
+                      family:
+                        type: string
+                        enum:
+                          - neutral
+                          - skin
+                          - brown
+                          - red
+                          - orange
+                          - yellow
+                          - green
+                          - blue
+                          - cyan
+                          - purple
+                          - pink
+                          - metallic
+                    required:
+                      - name
+                      - code
+                      - hex
+                      - enabled
+                      - family
+
       responses:
         "200":
           description: Mosaic generated successfully
@@ -76,6 +128,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
   /mosaic/download/{sessionId}/{filename}:
     get:
       operationId: downloadFile
@@ -102,6 +155,7 @@ paths:
                 format: binary
         "404":
           description: File not found
+
 components:
   schemas:
     HealthStatus:
@@ -111,6 +165,7 @@ components:
           type: string
       required:
         - status
+
     ColorCount:
       type: object
       properties:
@@ -130,6 +185,7 @@ components:
         - hex
         - count
         - beforeCleanup
+
     SectionInfo:
       type: object
       properties:
@@ -146,6 +202,7 @@ components:
         - row
         - col
         - filename
+
     MosaicResult:
       type: object
       properties:
@@ -199,6 +256,7 @@ components:
         - layoutUrl
         - csvUrl
         - zipUrl
+
     ErrorResponse:
       type: object
       properties:
