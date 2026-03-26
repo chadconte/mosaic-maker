@@ -41,7 +41,7 @@ function findNearestColorIndex(
   r: number,
   g: number,
   b: number,
-  activePalette: PaletteLabEntry[]
+  activePalette: PaletteLabEntry[],
 ): number {
   const pixelLab = rgbToLab(r, g, b);
   let minDist = Infinity;
@@ -61,7 +61,7 @@ export async function processImage(
   baseplateSize: number,
   columns: number,
   rows: number,
-  threshold: number
+  threshold: number,
 ): Promise<MosaicData> {
   const targetW = baseplateSize * columns;
   const targetH = baseplateSize * rows;
@@ -94,9 +94,9 @@ export async function processImage(
   for (let y = 0; y < targetH; y++) {
     for (let x = 0; x < targetW; x++) {
       const px = img.getPixelColor(x, y);
-      const r = (px >>> 24) & 0xff;
-      const g = (px >>> 16) & 0xff;
-      const b = (px >>> 8) & 0xff;
+      const r = (px >> 24) & 255;
+      const g = (px >> 16) & 255;
+      const b = (px >> 8) & 255;
       pixels[y * targetW + x] = findNearestColorIndex(r, g, b, fullPalette);
     }
   }
@@ -127,11 +127,12 @@ function countColors(pixels: number[]): Map<number, number> {
 function applyThreshold(
   pixels: number[],
   threshold: number,
-  palette: PaletteLabEntry[]
+  palette: PaletteLabEntry[],
 ): number[] {
   const result = [...pixels];
+  const maxPasses = 5;
 
-  while (true) {
+  for (let pass = 0; pass < maxPasses; pass++) {
     const counts = countColors(result);
     const removed = new Set<number>();
 
@@ -144,20 +145,34 @@ function applyThreshold(
     if (removed.size === 0) break;
 
     const surviving = palette.filter((e) => !removed.has(e.index));
-
     if (surviving.length === 0) break;
 
+    // Precompute remap table once per pass
+    const remap = new Map<number, number>();
+
+    for (const removedIdx of removed) {
+      const origEntry = palette.find((e) => e.index === removedIdx);
+      if (!origEntry) continue;
+
+      let minDist = Infinity;
+      let bestIdx = removedIdx;
+
+      for (const survivor of surviving) {
+        const d = labDistance(origEntry.lab, survivor.lab);
+        if (d < minDist) {
+          minDist = d;
+          bestIdx = survivor.index;
+        }
+      }
+
+      remap.set(removedIdx, bestIdx);
+    }
+
+    // Replace pixels using remap table
     for (let i = 0; i < result.length; i++) {
-      if (removed.has(result[i])) {
-        const r_val = result[i];
-        const origColor = palette[r_val];
-        if (!origColor) continue;
-        result[i] = findNearestColorIndex(
-          hexToRgb(origColor.color.hex).r,
-          hexToRgb(origColor.color.hex).g,
-          hexToRgb(origColor.color.hex).b,
-          surviving
-        );
+      const mapped = remap.get(result[i]);
+      if (mapped !== undefined) {
+        result[i] = mapped;
       }
     }
   }

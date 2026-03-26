@@ -30,7 +30,7 @@ router.post("/generate", upload.single("image"), async (req: Request, res: Respo
       res.status(400).json({ error: "columns and rows must be positive integers" });
       return;
     }
-    if (isNaN(threshold) || threshold < 1) {
+    if (isNaN(threshold) || threshold < 0) {
       res.status(400).json({ error: "threshold must be a positive integer" });
       return;
     }
