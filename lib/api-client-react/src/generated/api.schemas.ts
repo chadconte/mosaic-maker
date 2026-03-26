@@ -8,3 +8,52 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ColorCount {
+  name: string;
+  code: string;
+  hex: string;
+  count: number;
+  beforeCleanup: number;
+}
+
+export interface SectionInfo {
+  label: string;
+  row: number;
+  col: number;
+  filename: string;
+}
+
+export interface MosaicResult {
+  sessionId: string;
+  totalStuds: number;
+  width: number;
+  height: number;
+  baseplateSize: number;
+  columns: number;
+  rows: number;
+  colorsBefore: number;
+  colorsAfter: number;
+  colorCounts: ColorCount[];
+  sections: SectionInfo[];
+  previewUrl: string;
+  layoutUrl: string;
+  csvUrl: string;
+  zipUrl: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export type GenerateMosaicBody = {
+  image: Blob;
+  /** Baseplate size (16 or 32) */
+  baseplateSize: number;
+  /** Number of baseplate columns */
+  columns: number;
+  /** Number of baseplate rows */
+  rows: number;
+  /** Minimum color usage threshold (default 10) */
+  threshold?: number;
+};

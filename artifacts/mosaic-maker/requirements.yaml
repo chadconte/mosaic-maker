@@ -1,0 +1,11 @@
+packages:
+  "framer-motion": "For page layout transitions and elegant micro-interactions"
+  "lucide-react": "For crisp, modern UI icons"
+  "clsx": "For conditional class joining"
+  "tailwind-merge": "For class merging in custom UI components"
+
+images: []
+
+notes:
+  - Expecting @workspace/api-client-react to expose useGenerateMosaic and getDownloadFileUrl
+  - The mosaic generation might take a few seconds, requiring a beautiful loading state

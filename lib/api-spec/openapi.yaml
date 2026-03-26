@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: mosaic
+    description: Mosaic generation operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,83 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /mosaic/generate:
+    post:
+      operationId: generateMosaic
+      tags: [mosaic]
+      summary: Generate a LEGO mosaic from an uploaded image
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+                - baseplateSize
+                - columns
+                - rows
+              properties:
+                image:
+                  type: string
+                  format: binary
+                baseplateSize:
+                  type: integer
+                  description: Baseplate size (16 or 32)
+                columns:
+                  type: integer
+                  description: Number of baseplate columns
+                rows:
+                  type: integer
+                  description: Number of baseplate rows
+                threshold:
+                  type: integer
+                  description: Minimum color usage threshold (default 10)
+      responses:
+        "200":
+          description: Mosaic generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MosaicResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /mosaic/download/{sessionId}/{filename}:
+    get:
+      operationId: downloadFile
+      tags: [mosaic]
+      summary: Download a generated mosaic file
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
 components:
   schemas:
     HealthStatus:
@@ -33,4 +111,98 @@ components:
           type: string
       required:
         - status
-
+    ColorCount:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        hex:
+          type: string
+        count:
+          type: integer
+        beforeCleanup:
+          type: integer
+      required:
+        - name
+        - code
+        - hex
+        - count
+        - beforeCleanup
+    SectionInfo:
+      type: object
+      properties:
+        label:
+          type: string
+        row:
+          type: integer
+        col:
+          type: integer
+        filename:
+          type: string
+      required:
+        - label
+        - row
+        - col
+        - filename
+    MosaicResult:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        totalStuds:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        baseplateSize:
+          type: integer
+        columns:
+          type: integer
+        rows:
+          type: integer
+        colorsBefore:
+          type: integer
+        colorsAfter:
+          type: integer
+        colorCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColorCount"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/SectionInfo"
+        previewUrl:
+          type: string
+        layoutUrl:
+          type: string
+        csvUrl:
+          type: string
+        zipUrl:
+          type: string
+      required:
+        - sessionId
+        - totalStuds
+        - width
+        - height
+        - baseplateSize
+        - columns
+        - rows
+        - colorsBefore
+        - colorsAfter
+        - colorCounts
+        - sections
+        - previewUrl
+        - layoutUrl
+        - csvUrl
+        - zipUrl
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

@@ -14,3 +14,58 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Generate a LEGO mosaic from an uploaded image
+ */
+export const GenerateMosaicBody = zod.object({
+  image: zod.instanceof(File),
+  baseplateSize: zod.number().describe("Baseplate size (16 or 32)"),
+  columns: zod.number().describe("Number of baseplate columns"),
+  rows: zod.number().describe("Number of baseplate rows"),
+  threshold: zod
+    .number()
+    .optional()
+    .describe("Minimum color usage threshold (default 10)"),
+});
+
+export const GenerateMosaicResponse = zod.object({
+  sessionId: zod.string(),
+  totalStuds: zod.number(),
+  width: zod.number(),
+  height: zod.number(),
+  baseplateSize: zod.number(),
+  columns: zod.number(),
+  rows: zod.number(),
+  colorsBefore: zod.number(),
+  colorsAfter: zod.number(),
+  colorCounts: zod.array(
+    zod.object({
+      name: zod.string(),
+      code: zod.string(),
+      hex: zod.string(),
+      count: zod.number(),
+      beforeCleanup: zod.number(),
+    }),
+  ),
+  sections: zod.array(
+    zod.object({
+      label: zod.string(),
+      row: zod.number(),
+      col: zod.number(),
+      filename: zod.string(),
+    }),
+  ),
+  previewUrl: zod.string(),
+  layoutUrl: zod.string(),
+  csvUrl: zod.string(),
+  zipUrl: zod.string(),
+});
+
+/**
+ * @summary Download a generated mosaic file
+ */
+export const DownloadFileParams = zod.object({
+  sessionId: zod.coerce.string(),
+  filename: zod.coerce.string(),
+});

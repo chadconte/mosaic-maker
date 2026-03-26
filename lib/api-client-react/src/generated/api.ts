@@ -5,18 +5,26 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ErrorResponse,
+  GenerateMosaicBody,
+  HealthStatus,
+  MosaicResult,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +100,198 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate a LEGO mosaic from an uploaded image
+ */
+export const getGenerateMosaicUrl = () => {
+  return `/api/mosaic/generate`;
+};
+
+export const generateMosaic = async (
+  generateMosaicBody: GenerateMosaicBody,
+  options?: RequestInit,
+): Promise<MosaicResult> => {
+  const formData = new FormData();
+  formData.append(`image`, generateMosaicBody.image);
+  formData.append(`baseplateSize`, generateMosaicBody.baseplateSize.toString());
+  formData.append(`columns`, generateMosaicBody.columns.toString());
+  formData.append(`rows`, generateMosaicBody.rows.toString());
+  if (generateMosaicBody.threshold !== undefined) {
+    formData.append(`threshold`, generateMosaicBody.threshold.toString());
+  }
+
+  return customFetch<MosaicResult>(getGenerateMosaicUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getGenerateMosaicMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMosaic>>,
+    TError,
+    { data: BodyType<GenerateMosaicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateMosaic>>,
+  TError,
+  { data: BodyType<GenerateMosaicBody> },
+  TContext
+> => {
+  const mutationKey = ["generateMosaic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateMosaic>>,
+    { data: BodyType<GenerateMosaicBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateMosaic(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateMosaicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateMosaic>>
+>;
+export type GenerateMosaicMutationBody = BodyType<GenerateMosaicBody>;
+export type GenerateMosaicMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a LEGO mosaic from an uploaded image
+ */
+export const useGenerateMosaic = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMosaic>>,
+    TError,
+    { data: BodyType<GenerateMosaicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateMosaic>>,
+  TError,
+  { data: BodyType<GenerateMosaicBody> },
+  TContext
+> => {
+  return useMutation(getGenerateMosaicMutationOptions(options));
+};
+
+/**
+ * @summary Download a generated mosaic file
+ */
+export const getDownloadFileUrl = (sessionId: string, filename: string) => {
+  return `/api/mosaic/download/${sessionId}/${filename}`;
+};
+
+export const downloadFile = async (
+  sessionId: string,
+  filename: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getDownloadFileUrl(sessionId, filename), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadFileQueryKey = (
+  sessionId: string,
+  filename: string,
+) => {
+  return [`/api/mosaic/download/${sessionId}/${filename}`] as const;
+};
+
+export const getDownloadFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  filename: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getDownloadFileQueryKey(sessionId, filename);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadFile>>> = ({
+    signal,
+  }) => downloadFile(sessionId, filename, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(sessionId && filename),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadFile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DownloadFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadFile>>
+>;
+export type DownloadFileQueryError = ErrorType<void>;
+
+/**
+ * @summary Download a generated mosaic file
+ */
+
+export function useDownloadFile<
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  filename: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDownloadFileQueryOptions(
+    sessionId,
+    filename,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

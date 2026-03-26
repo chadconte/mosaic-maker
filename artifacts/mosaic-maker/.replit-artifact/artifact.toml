@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Mosaic Maker"
+version = "1.0.0"
+id = "artifacts/mosaic-maker"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19776
+
+[services.development]
+run = "pnpm --filter @workspace/mosaic-maker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mosaic-maker", "run", "build" ]
+publicDir = "artifacts/mosaic-maker/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19776"
+BASE_PATH = "/"

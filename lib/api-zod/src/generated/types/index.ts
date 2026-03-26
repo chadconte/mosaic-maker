@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./colorCount";
+export * from "./errorResponse";
+export * from "./generateMosaicBody";
 export * from "./healthStatus";
+export * from "./mosaicResult";
+export * from "./sectionInfo";
