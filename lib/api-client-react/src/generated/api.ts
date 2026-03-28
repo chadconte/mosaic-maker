@@ -27,17 +27,14 @@ import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
-
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
-
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
  * Returns server health status
- * @summary Health check
  */
 export const getHealthCheckUrl = () => {
-  return `/api/healthz`;
+  return `${window.location.origin}/api/healthz`;
 };
 
 export const healthCheck = async (
@@ -84,10 +81,6 @@ export type HealthCheckQueryResult = NonNullable<
 >;
 export type HealthCheckQueryError = ErrorType<unknown>;
 
-/**
- * @summary Health check
- */
-
 export function useHealthCheck<
   TData = Awaited<ReturnType<typeof healthCheck>>,
   TError = ErrorType<unknown>,
@@ -109,10 +102,10 @@ export function useHealthCheck<
 }
 
 /**
- * @summary Generate a LEGO mosaic from an uploaded image
+ * Generate Mosaic
  */
 export const getGenerateMosaicUrl = () => {
-  return `/api/mosaic/generate`;
+  return `${window.location.origin}/api/mosaic/generate`;
 };
 
 export const generateMosaic = async (
@@ -124,12 +117,15 @@ export const generateMosaic = async (
   formData.append(`baseplateSize`, generateMosaicBody.baseplateSize.toString());
   formData.append(`columns`, generateMosaicBody.columns.toString());
   formData.append(`rows`, generateMosaicBody.rows.toString());
+
   if (generateMosaicBody.mode !== undefined) {
     formData.append(`mode`, generateMosaicBody.mode);
   }
+
   if (generateMosaicBody.protectEdges !== undefined) {
     formData.append(`protectEdges`, generateMosaicBody.protectEdges.toString());
   }
+
   if (generateMosaicBody.palette !== undefined) {
     generateMosaicBody.palette.forEach((value) =>
       formData.append(`palette`, JSON.stringify(value)),
@@ -161,6 +157,7 @@ export const getGenerateMosaicMutationOptions = <
   TContext
 > => {
   const mutationKey = ["generateMosaic"];
+
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -174,7 +171,6 @@ export const getGenerateMosaicMutationOptions = <
     { data: BodyType<GenerateMosaicBody> }
   > = (props) => {
     const { data } = props ?? {};
-
     return generateMosaic(data, requestOptions);
   };
 
@@ -187,9 +183,6 @@ export type GenerateMosaicMutationResult = NonNullable<
 export type GenerateMosaicMutationBody = BodyType<GenerateMosaicBody>;
 export type GenerateMosaicMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Generate a LEGO mosaic from an uploaded image
- */
 export const useGenerateMosaic = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -211,10 +204,10 @@ export const useGenerateMosaic = <
 };
 
 /**
- * @summary Download a generated mosaic file
+ * Download File
  */
 export const getDownloadFileUrl = (sessionId: string, filename: string) => {
-  return `/api/mosaic/download/${sessionId}/${filename}`;
+  return `${window.location.origin}/api/mosaic/download/${sessionId}/${filename}`;
 };
 
 export const downloadFile = async (
@@ -275,10 +268,6 @@ export type DownloadFileQueryResult = NonNullable<
   Awaited<ReturnType<typeof downloadFile>>
 >;
 export type DownloadFileQueryError = ErrorType<void>;
-
-/**
- * @summary Download a generated mosaic file
- */
 
 export function useDownloadFile<
   TData = Awaited<ReturnType<typeof downloadFile>>,
