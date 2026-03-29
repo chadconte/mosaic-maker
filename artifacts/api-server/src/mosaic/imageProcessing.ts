@@ -24,7 +24,48 @@ interface PaletteLabEntry {
 interface ProcessImageOptions {
   palette?: PaletteColor[];
   protectEdges?: boolean;
+  mode?: "detail" | "balanced" | "clean";
 }
+
+interface ModeTuning {
+  smoothingPasses: number;
+  nonSkinMajorityThreshold: number;
+  nonSkinLeadRequired: number;
+  skinMajorityThreshold: number;
+  skinLeadRequired: number;
+  outlierDistanceThreshold: number;
+  glowPenalty: number;
+}
+
+const MODE_TUNING: Record<"detail" | "balanced" | "clean", ModeTuning> = {
+  detail: {
+    smoothingPasses: 2,
+    nonSkinMajorityThreshold: 5,
+    nonSkinLeadRequired: 3,
+    skinMajorityThreshold: 4,
+    skinLeadRequired: 3,
+    outlierDistanceThreshold: 12,
+    glowPenalty: 1,
+  },
+  balanced: {
+    smoothingPasses: 3,
+    nonSkinMajorityThreshold: 4,
+    nonSkinLeadRequired: 2,
+    skinMajorityThreshold: 4,
+    skinLeadRequired: 2,
+    outlierDistanceThreshold: 9,
+    glowPenalty: 2,
+  },
+  clean: {
+    smoothingPasses: 4,
+    nonSkinMajorityThreshold: 3,
+    nonSkinLeadRequired: 2,
+    skinMajorityThreshold: 3,
+    skinLeadRequired: 2,
+    outlierDistanceThreshold: 7,
+    glowPenalty: 3,
+  },
+};
 
 const FAMILY_COMPATIBILITY: Record<ColorFamily, ColorFamily[]> = {
   neutral: ["neutral"],
@@ -131,14 +172,6 @@ function isLikelySkinPixel(r: number, g: number, b: number): boolean {
   return classicRgbRule && hsvRule;
 }
 
-function isVeryLightPixel(pixelLab: LAB): boolean {
-  return pixelLab.l >= 80;
-}
-
-function isLightPixel(pixelLab: LAB): boolean {
-  return pixelLab.l >= 60;
-}
-
 function weightedDistanceForSkin(pixelLab: LAB, entry: PaletteLabEntry): number {
   let d = labDistance(pixelLab, entry.lab);
   const family = entry.color.family;
@@ -208,11 +241,59 @@ function findNearestPaletteEntryWeightedForSkin(
   return best;
 }
 
+function isGlowFamily(entry: PaletteLabEntry): boolean {
+  return entry.color.family === "blue" || entry.color.family === "cyan";
+}
+
+function glowContainmentPenalty(
+  pixelLab: LAB,
+  entry: PaletteLabEntry,
+  glowPenalty: number,
+): number {
+  const entryChroma = Math.sqrt(
+    entry.lab.a * entry.lab.a + entry.lab.b * entry.lab.b,
+  );
+
+  if (entryChroma <= 40 || !isGlowFamily(entry)) {
+    return 0;
+  }
+
+  const pixelChroma = Math.sqrt(
+    pixelLab.a * pixelLab.a + pixelLab.b * pixelLab.b,
+  );
+
+  const entryIsMuchBrighter = entry.lab.l > pixelLab.l + 6;
+
+  // More negative b means bluer in Lab.
+  const pixelIsClearlyBlue = pixelLab.b < -18 || (pixelLab.b < -10 && pixelChroma > 26);
+
+  if (!entryIsMuchBrighter || pixelIsClearlyBlue) {
+    return 0;
+  }
+
+  // Strongest protection when the source pixel is not very saturated
+  // and not already meaningfully blue.
+  let penalty = glowPenalty;
+
+  if (pixelChroma < 18) {
+    penalty += glowPenalty * 0.8;
+  } else if (pixelChroma < 28) {
+    penalty += glowPenalty * 0.35;
+  }
+
+  if (pixelLab.b > -6) {
+    penalty += glowPenalty * 0.5;
+  }
+
+  return penalty;
+}
+
 function findNearestColorIndexFamilyAware(
   r: number,
   g: number,
   b: number,
   activePalette: PaletteLabEntry[],
+  tuning: ModeTuning,
 ): number {
   const pixelLab = rgbToLab(r, g, b);
 
@@ -225,6 +306,8 @@ function findNearestColorIndexFamilyAware(
 
   for (const entry of activePalette) {
     let d = labDistance(pixelLab, entry.lab);
+
+    d += glowContainmentPenalty(pixelLab, entry, tuning.glowPenalty);
 
     if (entry.color.family === "metallic") {
       d += 16;
@@ -424,26 +507,45 @@ function buildFaceFeatureMask(
   return expanded;
 }
 
-function shouldProtectPixel(
-  idx: number,
-  edgeMask: boolean[],
-  skinMask: boolean[],
-  faceFeatureMask: boolean[],
-): boolean {
-  return edgeMask[idx] || faceFeatureMask[idx] || (!skinMask[idx] && false);
+function getAverageNeighborPaletteDistance(
+  pixelIndex: number,
+  neighborIndexes: number[],
+  pixels: number[],
+  palette: PaletteLabEntry[],
+): number {
+  const centerEntry = palette.find((entry) => entry.index === pixelIndex);
+  if (!centerEntry || neighborIndexes.length === 0) {
+    return 0;
+  }
+
+  let total = 0;
+  let count = 0;
+
+  for (const neighborIdx of neighborIndexes) {
+    const neighborColorIndex = pixels[neighborIdx];
+    const neighborEntry = palette.find((entry) => entry.index === neighborColorIndex);
+    if (!neighborEntry) continue;
+
+    total += labDistance(centerEntry.lab, neighborEntry.lab);
+    count++;
+  }
+
+  return count > 0 ? total / count : 0;
 }
 
-function applySmoothing(
+function applyAdaptiveSmoothing(
   pixels: number[],
   width: number,
   height: number,
+  palette: PaletteLabEntry[],
   edgeMask: boolean[],
   skinMask: boolean[],
   faceFeatureMask: boolean[],
+  tuning: ModeTuning,
 ): number[] {
   const result = [...pixels];
 
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < tuning.smoothingPasses; pass++) {
     let changed = false;
     const next = [...result];
 
@@ -473,23 +575,37 @@ function applySmoothing(
           }
         }
 
+        const currentColor = result[idx];
+        if (majorityColor === currentColor) continue;
+
+        const currentCount = counts.get(currentColor) ?? 0;
         const isSkinArea = skinMask[idx];
 
+        const averageDistanceToNeighbors = getAverageNeighborPaletteDistance(
+          currentColor,
+          neighbors,
+          result,
+          palette,
+        );
+
+        if (averageDistanceToNeighbors <= tuning.outlierDistanceThreshold) {
+          continue;
+        }
+
         if (!isSkinArea) {
-          if (majorityColor !== result[idx] && majorityCount >= 5) {
+          if (
+            majorityCount >= tuning.nonSkinMajorityThreshold &&
+            majorityCount >= currentCount + tuning.nonSkinLeadRequired
+          ) {
             next[idx] = majorityColor;
             changed = true;
           }
           continue;
         }
 
-        const currentColor = result[idx];
-        const currentCount = counts.get(currentColor) ?? 0;
-
         if (
-          majorityColor !== currentColor &&
-          majorityCount >= 4 &&
-          majorityCount >= currentCount + 2
+          majorityCount >= tuning.skinMajorityThreshold &&
+          majorityCount >= currentCount + tuning.skinLeadRequired
         ) {
           next[idx] = majorityColor;
           changed = true;
@@ -507,6 +623,134 @@ function applySmoothing(
   return result;
 }
 
+function diffuseError(
+  imgLabs: LAB[],
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  original: LAB,
+  mapped: LAB,
+  strength: number,
+) {
+  const error = {
+    l: (original.l - mapped.l) * strength,
+    a: (original.a - mapped.a) * strength,
+    b: (original.b - mapped.b) * strength,
+  };
+
+  const spread = [
+    { dx: 1, dy: 0, factor: 7 / 16 },
+    { dx: -1, dy: 1, factor: 3 / 16 },
+    { dx: 0, dy: 1, factor: 5 / 16 },
+    { dx: 1, dy: 1, factor: 1 / 16 },
+  ];
+
+  for (const { dx, dy, factor } of spread) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+    const idx = ny * width + nx;
+    imgLabs[idx] = {
+      l: imgLabs[idx].l + error.l * factor,
+      a: imgLabs[idx].a + error.a * factor,
+      b: imgLabs[idx].b + error.b * factor,
+    };
+  }
+}
+
+function quantizeWithDithering(
+  img: any,
+  width: number,
+  height: number,
+  palette: PaletteLabEntry[],
+  tuning: ModeTuning,
+  mode: "detail" | "balanced" | "clean",
+): number[] {
+  const pixels: number[] = new Array(width * height);
+  const labs: LAB[] = new Array(width * height);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      labs[y * width + x] = rgbToLab(r, g, b);
+    }
+  }
+
+  const ditherStrength =
+    mode === "detail" ? 0.25 :
+    mode === "balanced" ? 0.12 :
+    0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const lab = labs[idx];
+
+      const mappedIndex = findNearestColorIndexFamilyAwareLab(
+        lab,
+        palette,
+        tuning,
+      );
+
+      pixels[idx] = mappedIndex;
+
+      if (ditherStrength > 0) {
+        const mappedEntry = palette.find((entry) => entry.index === mappedIndex);
+        if (mappedEntry) {
+          diffuseError(
+            labs,
+            width,
+            height,
+            x,
+            y,
+            lab,
+            mappedEntry.lab,
+            ditherStrength,
+          );
+        }
+      }
+    }
+  }
+
+  return pixels;
+}
+
+function findNearestColorIndexFamilyAwareLab(
+  pixelLab: LAB,
+  activePalette: PaletteLabEntry[],
+  tuning: ModeTuning,
+): number {
+  let minDist = Infinity;
+  let best = activePalette[0];
+
+  for (const entry of activePalette) {
+    let d = labDistance(pixelLab, entry.lab);
+
+    d += glowContainmentPenalty(pixelLab, entry, tuning.glowPenalty);
+
+    if (entry.color.family === "metallic") {
+      d += 16;
+    }
+
+    if (entry.color.family === "brown" && pixelLab.l > 68) {
+      d += 8;
+    }
+
+    if (entry.color.family === "neutral" && pixelLab.l > 78) {
+      d += 5;
+    }
+
+    if (d < minDist) {
+      minDist = d;
+      best = entry;
+    }
+  }
+
+  return best.index;
+}
+
 function findBestReplacementIndex(
   removedIdx: number,
   surviving: PaletteLabEntry[],
@@ -516,9 +760,7 @@ function findBestReplacementIndex(
   if (!removedEntry) return removedIdx;
 
   const compatibleFamilies =
-    FAMILY_COMPATIBILITY[removedEntry.color.family] ?? [
-      removedEntry.color.family,
-    ];
+    FAMILY_COMPATIBILITY[removedEntry.color.family] ?? [removedEntry.color.family];
 
   const familyCompatibleSurvivors = surviving.filter((entry) =>
     compatibleFamilies.includes(entry.color.family),
@@ -555,9 +797,7 @@ function chooseLocalReplacement(
   if (!removedEntry) return null;
 
   const compatibleFamilies =
-    FAMILY_COMPATIBILITY[removedEntry.color.family] ?? [
-      removedEntry.color.family,
-    ];
+    FAMILY_COMPATIBILITY[removedEntry.color.family] ?? [removedEntry.color.family];
 
   let bestColor: number | null = null;
   let bestScore = Infinity;
@@ -665,7 +905,6 @@ function applyThreshold(
   height: number,
   protectEdges: boolean,
   edgeMask: boolean[],
-  skinMask: boolean[],
   faceFeatureMask: boolean[],
 ): number[] {
   if (threshold <= 0) {
@@ -734,10 +973,7 @@ function applyThreshold(
             palette,
           ) ?? fallbackMap.get(current)!;
 
-        if (
-          protectEdges &&
-          (edgeMask[idx] || faceFeatureMask[idx])
-        ) {
+        if (protectEdges && faceFeatureMask[idx]) {
           const safeLocal =
             chooseLocalReplacement(
               x,
@@ -817,19 +1053,17 @@ export async function processImage(
     throw new Error("At least one palette color must be enabled.");
   }
 
-  const quantizedPixels: number[] = new Array(targetW * targetH);
+  const mode = options.mode ?? "balanced";
+  const tuning = MODE_TUNING[mode];
 
-  for (let y = 0; y < targetH; y++) {
-    for (let x = 0; x < targetW; x++) {
-      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
-      quantizedPixels[y * targetW + x] = findNearestColorIndexFamilyAware(
-        r,
-        g,
-        b,
-        activePalette,
-      );
-    }
-  }
+  const quantizedPixels = quantizeWithDithering(
+    img,
+    targetW,
+    targetH,
+    activePalette,
+    tuning,
+    mode,
+  );
 
   const colorCountsBefore = cloneCounts(countColors(quantizedPixels));
   const protectEdges = options.protectEdges ?? true;
@@ -846,17 +1080,20 @@ export async function processImage(
     ? buildFaceFeatureMask(img, targetW, targetH, skinMask)
     : new Array<boolean>(targetW * targetH).fill(false);
 
+  console.log("MODE_USED", mode);
   console.log("THRESHOLD_USED", threshold);
   console.log("COLOR_COUNTS_BEFORE", Object.fromEntries(colorCountsBefore));
   console.log("PROTECT_EDGES", protectEdges);
 
-  const smoothedPixels = applySmoothing(
+  const smoothedPixels = applyAdaptiveSmoothing(
     quantizedPixels,
     targetW,
     targetH,
+    activePalette,
     edgeMask,
     skinMask,
     faceFeatureMask,
+    tuning,
   );
 
   const finalPixels = applyThreshold(
@@ -867,7 +1104,6 @@ export async function processImage(
     targetH,
     protectEdges,
     edgeMask,
-    skinMask,
     faceFeatureMask,
   );
 

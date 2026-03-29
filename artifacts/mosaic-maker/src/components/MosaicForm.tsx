@@ -34,11 +34,7 @@ interface MosaicFormProps {
   isPending: boolean;
 }
 
-const MODE_DEFAULT_THRESHOLD: Record<DetailMode, number> = {
-  detail: 4,
-  balanced: 8,
-  clean: 15,
-};
+const DEFAULT_THRESHOLD = 10;
 
 export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -50,9 +46,7 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const [rows, setRows] = useState<number>(8);
 
   const [mode, setMode] = useState<DetailMode>("balanced");
-  const [threshold, setThreshold] = useState<number>(
-    MODE_DEFAULT_THRESHOLD.balanced,
-  );
+  const [threshold, setThreshold] = useState<number>(DEFAULT_THRESHOLD);
   const [protectEdges, setProtectEdges] = useState(true);
   const [palette, setPalette] = useState<PaletteColor[]>(PALETTE);
 
@@ -62,11 +56,6 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
       setPreview(URL.createObjectURL(selectedFile));
     }
   }, []);
-
-  const handleModeChange = (nextMode: DetailMode) => {
-    setMode(nextMode);
-    setThreshold(MODE_DEFAULT_THRESHOLD[nextMode]);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,19 +92,22 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const enabledCount = palette.filter((c) => c.enabled).length;
 
   const modeDescriptions: Record<DetailMode, string> = {
-    detail: "Keeps more variation and fine image detail.",
-    balanced: "Best all-around setting for most mosaics.",
-    clean: "Favors larger color regions and a simpler final build.",
+    detail:
+      "Most realistic. Strongest dithering, least smoothing, best for painterly detail.",
+    balanced:
+      "Middle ground. Preserves detail while keeping the image a little cleaner.",
+    clean:
+      "Simpler rendering. Less dithering and more smoothing for flatter, cleaner shapes.",
   };
 
   const thresholdDescription =
     threshold <= 4
-      ? "Very low cleanup. Keeps more tiny color changes."
+      ? "Very low cleanup. More tiny color variation survives."
       : threshold <= 8
-        ? "Balanced cleanup. Good for most images."
-        : threshold <= 15
-          ? "Stronger cleanup. Removes more tiny color groups."
-          : "Very strong cleanup. Best for cleaner, simpler builds.";
+        ? "Moderate cleanup. Good detail with some simplification."
+        : threshold <= 12
+          ? "Strong cleanup. Small color clusters are reduced more aggressively."
+          : "Very strong cleanup. Better for simpler, cleaner builds.";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -289,7 +281,7 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
                         <button
                           key={option}
                           type="button"
-                          onClick={() => handleModeChange(option)}
+                          onClick={() => setMode(option)}
                           className={cn(
                             "min-h-[46px] px-4 rounded-xl border text-center text-sm font-medium transition-all capitalize whitespace-nowrap",
                             mode === option
@@ -314,7 +306,7 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
 
                   <p className="text-xs text-muted-foreground">
                     Any color used fewer than this number gets removed and folded
-                    into the closest surviving color.
+                    into the closest surviving color. Default is 10.
                   </p>
 
                   <input

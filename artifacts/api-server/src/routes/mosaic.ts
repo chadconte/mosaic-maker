@@ -19,27 +19,17 @@ const upload = multer({
 
 type DetailMode = "detail" | "balanced" | "clean";
 
-const MODE_THRESHOLD_MAP: Record<DetailMode, number> = {
-  detail: 4,
-  balanced: 8,
-  clean: 15,
-};
+const DEFAULT_THRESHOLD = 10;
 
-function resolveThreshold(mode: DetailMode): number {
-  return MODE_THRESHOLD_MAP[mode] ?? MODE_THRESHOLD_MAP.balanced;
-}
-
-function parseThreshold(rawThreshold: unknown, mode: DetailMode): number {
-  const fallback = resolveThreshold(mode);
-
+function parseThreshold(rawThreshold: unknown): number {
   if (rawThreshold === undefined || rawThreshold === null || rawThreshold === "") {
-    return fallback;
+    return DEFAULT_THRESHOLD;
   }
 
   const parsed = parseInt(String(rawThreshold), 10);
 
   if (Number.isNaN(parsed)) {
-    return fallback;
+    return DEFAULT_THRESHOLD;
   }
 
   return Math.max(0, Math.min(parsed, 200));
@@ -138,18 +128,11 @@ function getSingleParam(value: string | string[] | undefined): string {
   return value ?? "";
 }
 
-console.log("mosaic route booting");
-console.log("processImage type:", typeof processImage);
-console.log("exportMosaic type:", typeof exportMosaic);
-console.log("PALETTE loaded:", Array.isArray(PALETTE), "count:", PALETTE.length);
-
 router.post(
   "/generate",
   upload.single("image"),
   async (req: Request, res: Response) => {
     try {
-      console.log("generate route hit");
-
       if (!req.file) {
         res.status(400).json({ error: "No image file provided" });
         return;
@@ -159,7 +142,7 @@ router.post(
       const columns = parseInt(String(req.body.columns), 10);
       const rows = parseInt(String(req.body.rows), 10);
       const mode = String(req.body.mode ?? "balanced") as DetailMode;
-      const threshold = parseThreshold(req.body.threshold, mode);
+      const threshold = parseThreshold(req.body.threshold);
       const protectEdges =
         String(req.body.protectEdges ?? "true").toLowerCase() !== "false";
 
@@ -193,25 +176,6 @@ router.post(
 
       const sessionId = uuidv4();
 
-      console.log("REQUEST_SETTINGS", {
-        baseplateSize,
-        columns,
-        rows,
-        mode,
-        threshold,
-        protectEdges,
-        paletteSource:
-          parsedPalette?.length && requestEnabledPaletteCount > 0
-            ? "request"
-            : "default",
-        paletteCount: palette.length,
-        enabledPaletteCount: palette.filter((c) => c.enabled).length,
-        requestPaletteCount: parsedPalette?.length ?? 0,
-        requestEnabledPaletteCount,
-      });
-
-      console.log("calling processImage...");
-
       const mosaicData = await processImage(
         req.file.buffer,
         baseplateSize,
@@ -219,13 +183,11 @@ router.post(
         rows,
         threshold,
         {
+          mode,
           palette,
           protectEdges,
         },
       );
-
-      console.log("processImage complete");
-      console.log("calling exportMosaic...");
 
       const exported = await exportMosaic(
         sessionId,
@@ -234,8 +196,6 @@ router.post(
         columns,
         rows,
       );
-
-      console.log("exportMosaic complete");
 
       const colorCounts = Array.from(mosaicData.colorCountsAfter.entries())
         .sort((a, b) => b[1] - a[1])
