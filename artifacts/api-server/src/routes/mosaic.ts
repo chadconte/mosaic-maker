@@ -1,3 +1,5 @@
+// artifacts/api-server/src/routes/mosaic.ts
+
 import { Router, type IRouter, Request, Response } from "express";
 import multer from "multer";
 import * as path from "path";
@@ -9,6 +11,7 @@ import { exportMosaic } from "../mosaic/exportUtils.js";
 import { PALETTE, type PaletteColor } from "../mosaic/palette.js";
 
 const router: IRouter = Router();
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -24,6 +27,22 @@ const MODE_THRESHOLD_MAP: Record<DetailMode, number> = {
 
 function resolveThreshold(mode: DetailMode): number {
   return MODE_THRESHOLD_MAP[mode] ?? MODE_THRESHOLD_MAP.balanced;
+}
+
+function parseThreshold(rawThreshold: unknown, mode: DetailMode): number {
+  const fallback = resolveThreshold(mode);
+
+  if (rawThreshold === undefined || rawThreshold === null || rawThreshold === "") {
+    return fallback;
+  }
+
+  const parsed = parseInt(String(rawThreshold), 10);
+
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(parsed, 200));
 }
 
 function parsePalette(rawPalette: unknown): PaletteColor[] | undefined {
@@ -64,7 +83,6 @@ function parsePalette(rawPalette: unknown): PaletteColor[] | undefined {
 
     if (typeof rawPalette === "string") {
       const trimmed = rawPalette.trim();
-
       if (!trimmed) return undefined;
 
       if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
@@ -123,12 +141,7 @@ function getSingleParam(value: string | string[] | undefined): string {
 console.log("mosaic route booting");
 console.log("processImage type:", typeof processImage);
 console.log("exportMosaic type:", typeof exportMosaic);
-console.log(
-  "PALETTE loaded:",
-  Array.isArray(PALETTE),
-  "count:",
-  PALETTE.length,
-);
+console.log("PALETTE loaded:", Array.isArray(PALETTE), "count:", PALETTE.length);
 
 router.post(
   "/generate",
@@ -145,10 +158,8 @@ router.post(
       const baseplateSize = parseInt(String(req.body.baseplateSize), 10);
       const columns = parseInt(String(req.body.columns), 10);
       const rows = parseInt(String(req.body.rows), 10);
-
       const mode = String(req.body.mode ?? "balanced") as DetailMode;
-      const threshold = resolveThreshold(mode);
-
+      const threshold = parseThreshold(req.body.threshold, mode);
       const protectEdges =
         String(req.body.protectEdges ?? "true").toLowerCase() !== "false";
 
@@ -187,7 +198,7 @@ router.post(
         columns,
         rows,
         mode,
-        resolvedThreshold: threshold,
+        threshold,
         protectEdges,
         paletteSource:
           parsedPalette?.length && requestEnabledPaletteCount > 0
@@ -200,6 +211,7 @@ router.post(
       });
 
       console.log("calling processImage...");
+
       const mosaicData = await processImage(
         req.file.buffer,
         baseplateSize,
@@ -211,9 +223,10 @@ router.post(
           protectEdges,
         },
       );
-      console.log("processImage complete");
 
+      console.log("processImage complete");
       console.log("calling exportMosaic...");
+
       const exported = await exportMosaic(
         sessionId,
         mosaicData,
@@ -221,6 +234,7 @@ router.post(
         columns,
         rows,
       );
+
       console.log("exportMosaic complete");
 
       const colorCounts = Array.from(mosaicData.colorCountsAfter.entries())
@@ -279,7 +293,7 @@ router.get("/download/:sessionId/:filename", (req: Request, res: Response) => {
     return;
   }
 
-  if (!/^[\w\-. ]+\.(png|csv|zip)$/i.test(filename)) {
+  if (!/^[\w\-.]+\.(png|csv|zip)$/i.test(filename)) {
     res.status(400).json({ error: "Invalid filename" });
     return;
   }

@@ -1,3 +1,5 @@
+// artifacts/mosaic-maker/src/pages/Home.tsx
+
 import React, { useState } from "react";
 import { Layout } from "lucide-react";
 import { useMosaicGenerator } from "../hooks/use-mosaic";
@@ -16,6 +18,7 @@ type MosaicFormData = {
   columns: number;
   rows: number;
   mode: GenerateMosaicBodyMode;
+  threshold: number;
   protectEdges: boolean;
   palette: GenerateMosaicBodyPaletteItem[];
 };
@@ -51,69 +54,59 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <header className="bg-white border-b border-border sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-inner">
-              <Layout className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-zinc-50">
+      <div className="mx-auto max-w-[1720px] px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 rounded-3xl border border-border bg-white p-6 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-primary/10 p-3">
+              <Layout className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">
-              Mosaic Maker
-            </h1>
-          </div>
-          <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-            Professional Studio Tool
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          <div
-            className={`lg:col-span-4 lg:sticky lg:top-24 transition-all duration-500 ${
-              result ? "lg:col-span-4" : "lg:col-span-5 lg:col-start-4"
-            }`}
-          >
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground">
-                Create Pattern
-              </h2>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                Upload any image to generate a precise stud-based mosaic grid
-                using standard color palettes.
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                Mosaic Maker
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Professional Studio Tool
               </p>
             </div>
-            <MosaicForm onSubmit={handleSubmit} isPending={isPending} />
           </div>
+        </header>
 
-          <div
-            className={`lg:col-span-8 transition-all duration-500 ${
-              result
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-8 pointer-events-none hidden lg:block"
-            }`}
-          >
+        <div className="grid grid-cols-1 gap-8 2xl:grid-cols-[760px_minmax(0,1fr)] items-start">
+          <section className="min-w-0">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-foreground">
+                Create Pattern
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Upload any image to generate a precise stud-based mosaic grid using
+                your palette and cleanup settings.
+              </p>
+            </div>
+
+            <MosaicForm onSubmit={handleSubmit} isPending={isPending} />
+          </section>
+
+          <section className="min-w-0">
             {result ? (
               <MosaicResults result={result} />
             ) : (
-              <div className="h-full min-h-[600px] rounded-3xl border-2 border-dashed border-border bg-white/50 flex flex-col items-center justify-center p-12 text-center">
-                <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-                  <Layout className="w-8 h-8 text-zinc-300" />
+              <div className="rounded-3xl border border-dashed border-border bg-white p-10 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                  <Layout className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">
+                <h3 className="text-lg font-semibold text-foreground">
                   Awaiting Image
                 </h3>
-                <p className="text-muted-foreground max-w-sm">
-                  Configure your canvas dimensions and upload an image to see
-                  the generated mosaic pattern, color requirements, and build
-                  guides here.
+                <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+                  Configure your canvas, choose your cleanup strength, upload an
+                  image, and your generated mosaic pattern will appear here.
                 </p>
               </div>
             )}
-          </div>
+          </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
