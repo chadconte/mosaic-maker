@@ -74,6 +74,143 @@ function findNearestPaletteEntry(
   return best;
 }
 
+function rgbToHsv(
+  r: number,
+  g: number,
+  b: number,
+): { h: number; s: number; v: number } {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+
+  let h = 0;
+
+  if (delta !== 0) {
+    if (max === rn) {
+      h = ((gn - bn) / delta) % 6;
+    } else if (max === gn) {
+      h = (bn - rn) / delta + 2;
+    } else {
+      h = (rn - gn) / delta + 4;
+    }
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  const s = max === 0 ? 0 : delta / max;
+  const v = max;
+
+  return { h, s, v };
+}
+
+function isLikelySkinPixel(r: number, g: number, b: number): boolean {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  const { h, s, v } = rgbToHsv(r, g, b);
+
+  const classicRgbRule =
+    r > 95 &&
+    g > 40 &&
+    b > 20 &&
+    delta > 15 &&
+    Math.abs(r - g) > 12 &&
+    r > g &&
+    r > b;
+
+  const hsvRule =
+    ((h >= 0 && h <= 50) || (h >= 330 && h <= 360)) &&
+    s >= 0.15 &&
+    s <= 0.68 &&
+    v >= 0.25;
+
+  return classicRgbRule && hsvRule;
+}
+
+function isVeryLightPixel(pixelLab: LAB): boolean {
+  return pixelLab.l >= 72;
+}
+
+function isLightPixel(pixelLab: LAB): boolean {
+  return pixelLab.l >= 58;
+}
+
+function weightedDistanceForSkin(
+  pixelLab: LAB,
+  entry: PaletteLabEntry,
+): number {
+  let d = labDistance(pixelLab, entry.lab);
+
+  const family = entry.color.family;
+  const lightnessDelta = Math.abs(pixelLab.l - entry.lab.l);
+
+  if (family === "skin") {
+    d *= 0.82;
+
+    if (lightnessDelta <= 12) d *= 0.9;
+    if (lightnessDelta <= 6) d *= 0.92;
+  }
+
+  if (family === "neutral") {
+    d += 8;
+    if (isVeryLightPixel(pixelLab)) {
+      d -= 2;
+    }
+  }
+
+  if (family === "brown") {
+    d += 10;
+
+    if (isLightPixel(pixelLab)) {
+      d += 12;
+    }
+
+    if (isVeryLightPixel(pixelLab)) {
+      d += 18;
+    }
+
+    if (entry.lab.l < pixelLab.l - 10) {
+      d += 10;
+    }
+
+    if (entry.lab.l < pixelLab.l - 20) {
+      d += 12;
+    }
+  }
+
+  if (
+    family !== "skin" &&
+    family !== "brown" &&
+    family !== "neutral"
+  ) {
+    d += 20;
+  }
+
+  return d;
+}
+
+function findNearestPaletteEntryWeightedForSkin(
+  pixelLab: LAB,
+  activePalette: PaletteLabEntry[],
+): PaletteLabEntry {
+  let minDist = Infinity;
+  let best = activePalette[0];
+
+  for (const entry of activePalette) {
+    const d = weightedDistanceForSkin(pixelLab, entry);
+    if (d < minDist) {
+      minDist = d;
+      best = entry;
+    }
+  }
+
+  return best;
+}
+
 function findNearestColorIndexFamilyAware(
   r: number,
   g: number,
@@ -81,6 +218,22 @@ function findNearestColorIndexFamilyAware(
   activePalette: PaletteLabEntry[],
 ): number {
   const pixelLab = rgbToLab(r, g, b);
+
+  if (isLikelySkinPixel(r, g, b)) {
+    const skinCandidates = activePalette.filter(
+      (entry) =>
+        entry.color.family === "skin" ||
+        entry.color.family === "brown" ||
+        entry.color.family === "neutral",
+    );
+
+    const best = findNearestPaletteEntryWeightedForSkin(
+      pixelLab,
+      skinCandidates.length > 0 ? skinCandidates : activePalette,
+    );
+
+    return best.index;
+  }
 
   const nearestGlobal = findNearestPaletteEntry(pixelLab, activePalette);
   const compatibleFamilies = FAMILY_COMPATIBILITY[
@@ -198,8 +351,6 @@ function findBestReplacementIndex(
 }
 
 function applyDitheringPlaceholder(pixels: number[]): number[] {
-  // Future spot for dithering.
-  // Keep unchanged for now.
   return pixels;
 }
 
@@ -271,7 +422,6 @@ function applyThreshold(
     }
 
     if (!changed) {
-      // If protected edges prevent cleanup from finishing, force one pass ignoring edge protection
       for (let i = 0; i < result.length; i++) {
         const current = result[i];
         if (!removed.has(current)) continue;

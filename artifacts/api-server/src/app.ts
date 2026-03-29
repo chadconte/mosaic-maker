@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -34,8 +35,14 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
-const frontendDist = path.resolve(process.cwd(), "../mosaic-maker/dist/public");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const frontendDist = path.resolve(__dirname, "../../mosaic-maker/dist/public");
 const frontendIndex = path.join(frontendDist, "index.html");
+
+console.log("frontendDist:", frontendDist);
+console.log("frontendIndex exists:", fs.existsSync(frontendIndex));
 
 if (fs.existsSync(frontendDist) && fs.existsSync(frontendIndex)) {
   app.use(express.static(frontendDist));

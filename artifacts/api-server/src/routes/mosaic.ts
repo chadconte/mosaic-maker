@@ -31,7 +31,35 @@ function parsePalette(rawPalette: unknown): PaletteColor[] | undefined {
 
   try {
     if (Array.isArray(rawPalette)) {
-      return rawPalette as PaletteColor[];
+      const parsed = rawPalette
+        .map((item) => {
+          if (typeof item === "string") {
+            const parsedItem = JSON.parse(item);
+            return {
+              name: String(parsedItem.name),
+              code: String(parsedItem.code),
+              hex: String(parsedItem.hex),
+              enabled: Boolean(parsedItem.enabled),
+              family: parsedItem.family,
+            } as PaletteColor;
+          }
+
+          if (item && typeof item === "object") {
+            const obj = item as Record<string, unknown>;
+            return {
+              name: String(obj.name),
+              code: String(obj.code),
+              hex: String(obj.hex),
+              enabled: Boolean(obj.enabled),
+              family: obj.family as PaletteColor["family"],
+            } as PaletteColor;
+          }
+
+          return undefined;
+        })
+        .filter(Boolean) as PaletteColor[];
+
+      return parsed.length ? parsed : undefined;
     }
 
     if (typeof rawPalette === "string") {
@@ -42,17 +70,29 @@ function parsePalette(rawPalette: unknown): PaletteColor[] | undefined {
       if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
         const parsed = JSON.parse(trimmed);
 
-        if (!Array.isArray(parsed)) {
-          throw new Error("Palette must be an array");
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => ({
+            name: String(item.name),
+            code: String(item.code),
+            hex: String(item.hex),
+            enabled: Boolean(item.enabled),
+            family: item.family,
+          })) as PaletteColor[];
         }
 
-        return parsed.map((item) => ({
-          name: String(item.name),
-          code: String(item.code),
-          hex: String(item.hex),
-          enabled: Boolean(item.enabled),
-          family: item.family,
-        })) as PaletteColor[];
+        if (parsed && typeof parsed === "object") {
+          return [
+            {
+              name: String(parsed.name),
+              code: String(parsed.code),
+              hex: String(parsed.hex),
+              enabled: Boolean(parsed.enabled),
+              family: parsed.family,
+            } as PaletteColor,
+          ];
+        }
+
+        throw new Error("Palette must be an array or object");
       }
 
       if (trimmed.includes("[object Object]")) {
@@ -113,7 +153,13 @@ router.post(
         String(req.body.protectEdges ?? "true").toLowerCase() !== "false";
 
       const parsedPalette = parsePalette(req.body.palette);
-      const palette = parsedPalette?.length ? parsedPalette : PALETTE;
+      const requestEnabledPaletteCount =
+        parsedPalette?.filter((c) => c.enabled).length ?? 0;
+
+      const palette =
+        parsedPalette?.length && requestEnabledPaletteCount > 0
+          ? parsedPalette
+          : PALETTE;
 
       if (![16, 32].includes(baseplateSize)) {
         res.status(400).json({ error: "baseplateSize must be 16 or 32" });
@@ -143,9 +189,14 @@ router.post(
         mode,
         resolvedThreshold: threshold,
         protectEdges,
-        paletteSource: parsedPalette?.length ? "request" : "default",
+        paletteSource:
+          parsedPalette?.length && requestEnabledPaletteCount > 0
+            ? "request"
+            : "default",
         paletteCount: palette.length,
         enabledPaletteCount: palette.filter((c) => c.enabled).length,
+        requestPaletteCount: parsedPalette?.length ?? 0,
+        requestEnabledPaletteCount,
       });
 
       console.log("calling processImage...");
