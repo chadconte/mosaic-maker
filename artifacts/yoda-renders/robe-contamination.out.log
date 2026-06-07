@@ -1,0 +1,266 @@
+frontendDist: C:\Users\chadc\mosaic-maker\artifacts\mosaic-maker\dist\public
+frontendIndex exists: true
+[22:16:29.036] [32mINFO[39m (27268): [36mServer listening[39m
+    [35mport[39m: 3118
+ROBE_CONTAMINATION_COUNTS before_robe_contamination_cleanup { eligible: 10157, contamination: 62, contaminationPct: 0.61 }
+ROBE_CONTAMINATION_COUNTS after_robe_contamination_cleanup { eligible: 10157, contamination: 32, contaminationPct: 0.32 }
+MODE_USED balanced
+THRESHOLD_USED 10
+COLOR_COUNTS_BEFORE {
+  '0': 164,
+  '1': 7,
+  '2': 544,
+  '3': 3444,
+  '4': 1963,
+  '5': 4673,
+  '7': 83,
+  '11': 14,
+  '14': 417,
+  '15': 4311,
+  '24': 306,
+  '29': 2267,
+  '30': 286,
+  '31': 234,
+  '32': 469,
+  '33': 1663,
+  '34': 636,
+  '41': 15,
+  '43': 8
+}
+PROTECT_EDGES true
+FACE_STAGE_COUNTS after_quantization {
+  green: 5964,
+  gray: 871,
+  brown: 1209,
+  black: 879,
+  other: 403,
+  total: 9326,
+  greenPct: 63.95,
+  grayPct: 9.34,
+  brownPct: 12.96,
+  blackPct: 9.43
+}
+FACE_STAGE_COUNTS after_adaptive_smoothing {
+  green: 5988,
+  gray: 879,
+  brown: 1204,
+  black: 872,
+  other: 383,
+  total: 9326,
+  greenPct: 64.21,
+  grayPct: 9.43,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+COLOR_COUNTS_AFTER_THRESHOLD {
+  '0': 113,
+  '2': 357,
+  '3': 3270,
+  '4': 1811,
+  '5': 4659,
+  '7': 59,
+  '11': 14,
+  '14': 372,
+  '15': 4237,
+  '24': 303,
+  '29': 2986,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 672
+}
+INVALID_FINAL_COLORS []
+FACE_STAGE_COUNTS after_threshold {
+  green: 5997,
+  gray: 882,
+  brown: 1204,
+  black: 872,
+  other: 371,
+  total: 9326,
+  greenPct: 64.3,
+  grayPct: 9.46,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+FACE_STAGE_COUNTS after_robe_background_consolidation {
+  green: 5997,
+  gray: 882,
+  brown: 1204,
+  black: 872,
+  other: 371,
+  total: 9326,
+  greenPct: 64.3,
+  grayPct: 9.46,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+COLOR_COUNTS_AFTER {
+  '0': 113,
+  '2': 357,
+  '3': 3306,
+  '4': 1778,
+  '5': 4703,
+  '7': 59,
+  '11': 14,
+  '14': 372,
+  '15': 4236,
+  '24': 303,
+  '29': 2971,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 641
+}
+ROBE_CONTAMINATION_COUNTS before_robe_contamination_cleanup { eligible: 12750, contamination: 11, contaminationPct: 0.09 }
+ROBE_CONTAMINATION_COUNTS after_robe_contamination_cleanup { eligible: 12750, contamination: 6, contaminationPct: 0.05 }
+MODE_USED balanced
+THRESHOLD_USED 10
+COLOR_COUNTS_BEFORE {
+  '0': 390,
+  '1': 95,
+  '2': 812,
+  '3': 6665,
+  '4': 80,
+  '5': 1515,
+  '7': 588,
+  '9': 102,
+  '10': 487,
+  '11': 597,
+  '14': 4351,
+  '15': 2340,
+  '36': 99,
+  '38': 672,
+  '39': 347,
+  '40': 422,
+  '41': 1942
+}
+PROTECT_EDGES true
+FACE_STAGE_COUNTS after_quantization {
+  green: 0,
+  gray: 635,
+  brown: 2472,
+  black: 92,
+  other: 1804,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 12.69,
+  brownPct: 49.41,
+  blackPct: 1.84
+}
+FACE_STAGE_COUNTS after_adaptive_smoothing {
+  green: 0,
+  gray: 603,
+  brown: 2483,
+  black: 92,
+  other: 1825,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 12.05,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+COLOR_COUNTS_AFTER_THRESHOLD {
+  '0': 397,
+  '1': 79,
+  '2': 799,
+  '3': 6727,
+  '4': 66,
+  '5': 1462,
+  '7': 633,
+  '9': 88,
+  '10': 472,
+  '11': 597,
+  '14': 4368,
+  '15': 2401,
+  '36': 69,
+  '38': 649,
+  '39': 338,
+  '40': 445,
+  '41': 1914
+}
+INVALID_FINAL_COLORS []
+FACE_STAGE_COUNTS after_threshold {
+  green: 0,
+  gray: 603,
+  brown: 2483,
+  black: 92,
+  other: 1825,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 12.05,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+FACE_STAGE_COUNTS after_robe_background_consolidation {
+  green: 0,
+  gray: 603,
+  brown: 2483,
+  black: 92,
+  other: 1825,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 12.05,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+COLOR_COUNTS_AFTER {
+  '0': 397,
+  '1': 79,
+  '2': 799,
+  '3': 6726,
+  '4': 52,
+  '5': 1477,
+  '7': 633,
+  '9': 88,
+  '10': 472,
+  '11': 597,
+  '14': 4368,
+  '15': 2401,
+  '36': 69,
+  '38': 649,
+  '39': 338,
+  '40': 445,
+  '41': 1914
+}
+[22:17:07.582] [32mINFO[39m (27268): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 999
+[22:17:07.659] [32mINFO[39m (27268): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/mosaic/download/461b7bb7-c95f-4d3d-9af5-b2825316b2df/mosaic_preview.png"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[22:17:08.604] [32mINFO[39m (27268): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 933
+[22:17:08.621] [32mINFO[39m (27268): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/mosaic/download/a806a11c-e90e-4281-95a2-e35742d1b970/mosaic_preview.png"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1

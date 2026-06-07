@@ -1,0 +1,155 @@
+frontendDist: C:\Users\chadc\mosaic-maker\artifacts\mosaic-maker\dist\public
+frontendIndex exists: true
+[22:19:09.072] [32mINFO[39m (3132): [36mServer listening[39m
+    [35mport[39m: 3119
+ROBE_CONTAMINATION_COUNTS before_robe_contamination_cleanup { eligible: 10157, contamination: 62, contaminationPct: 0.61 }
+ROBE_CONTAMINATION_COUNTS after_robe_contamination_cleanup { eligible: 10157, contamination: 32, contaminationPct: 0.32 }
+MODE_USED balanced
+THRESHOLD_USED 10
+COLOR_COUNTS_BEFORE {
+  '0': 164,
+  '1': 7,
+  '2': 544,
+  '3': 3444,
+  '4': 1963,
+  '5': 4673,
+  '7': 83,
+  '11': 14,
+  '14': 417,
+  '15': 4311,
+  '24': 306,
+  '29': 2267,
+  '30': 286,
+  '31': 234,
+  '32': 469,
+  '33': 1663,
+  '34': 636,
+  '41': 15,
+  '43': 8
+}
+PROTECT_EDGES true
+FACE_STAGE_COUNTS after_quantization {
+  green: 5964,
+  gray: 871,
+  brown: 1209,
+  black: 879,
+  other: 403,
+  total: 9326,
+  greenPct: 63.95,
+  grayPct: 9.34,
+  brownPct: 12.96,
+  blackPct: 9.43
+}
+FACE_STAGE_COUNTS after_adaptive_smoothing {
+  green: 5988,
+  gray: 879,
+  brown: 1204,
+  black: 872,
+  other: 383,
+  total: 9326,
+  greenPct: 64.21,
+  grayPct: 9.43,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+COLOR_COUNTS_AFTER_THRESHOLD {
+  '0': 113,
+  '2': 357,
+  '3': 3270,
+  '4': 1811,
+  '5': 4659,
+  '7': 59,
+  '11': 14,
+  '14': 372,
+  '15': 4237,
+  '24': 303,
+  '29': 2986,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 672
+}
+INVALID_FINAL_COLORS []
+FACE_STAGE_COUNTS after_threshold {
+  green: 5997,
+  gray: 882,
+  brown: 1204,
+  black: 872,
+  other: 371,
+  total: 9326,
+  greenPct: 64.3,
+  grayPct: 9.46,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+FACE_STAGE_COUNTS after_robe_background_consolidation {
+  green: 5997,
+  gray: 882,
+  brown: 1204,
+  black: 872,
+  other: 371,
+  total: 9326,
+  greenPct: 64.3,
+  grayPct: 9.46,
+  brownPct: 12.91,
+  blackPct: 9.35
+}
+COLOR_COUNTS_AFTER {
+  '0': 113,
+  '2': 357,
+  '3': 3306,
+  '4': 1778,
+  '5': 4703,
+  '7': 59,
+  '11': 14,
+  '14': 372,
+  '15': 4236,
+  '24': 303,
+  '29': 2971,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 641
+}
+[22:19:53.484] [32mINFO[39m (3132): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1032
+[22:19:53.562] [32mINFO[39m (3132): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/mosaic/download/ef983baf-e2b2-4c06-b806-1e56e1a63a60/mosaic_preview.png"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2
+[22:19:53.588] [32mINFO[39m (3132): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "GET",
+      "url": "/"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1
+[22:21:42.679] [32mINFO[39m (3132): [36mrequest aborted[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": null
+    }
+    [35mresponseTime[39m: 81

@@ -67,6 +67,12 @@ const MODE_TUNING: Record<"detail" | "balanced" | "clean", ModeTuning> = {
   },
 };
 
+const ROBE_CONTAMINATION_NEIGHBOR_VOTES = 3;
+const ROBE_CLEANUP_MIN_GREEN_SKIN_PIXELS = 64;
+const ROBE_TEXTURE_MIN_REGION_SIZE = 320;
+const ROBE_TEXTURE_MAX_REGION_RATIO = 0.08;
+const ROBE_TEXTURE_MIN_LUMINANCE_DELTA = 7;
+
 const FAMILY_COMPATIBILITY: Record<ColorFamily, ColorFamily[]> = {
   neutral: ["neutral"],
   skin: ["skin", "brown", "orange", "red"],
@@ -891,10 +897,25 @@ function isRobeGreenContamination(entry: PaletteLabEntry): boolean {
   ].includes(entry.color.name);
 }
 
+function isRobeOffFamilyContamination(entry: PaletteLabEntry): boolean {
+  return (
+    entry.color.family === "green" ||
+    entry.color.family === "yellow" ||
+    entry.color.family === "cyan" ||
+    entry.color.family === "skin"
+  );
+}
+
 function isRobeNeutralTarget(entry: PaletteLabEntry): boolean {
   return ["Dark Brown", "Dark Bluish Gray", "Black Grey"].includes(
     entry.color.name,
   );
+}
+
+function isStableRobeTarget(entry: PaletteLabEntry): boolean {
+  if (entry.color.name === "White") return false;
+  if (entry.color.family === "brown") return true;
+  return entry.color.family === "neutral";
 }
 
 function isSourceGlowPixel(r: number, g: number, b: number): boolean {
@@ -907,6 +928,37 @@ function isSourceGlowPixel(r: number, g: number, b: number): boolean {
     h >= 75 && h <= 145 && s >= 0.42 && v >= 0.68 && g > r + 24 && g > b + 12;
 
   return brightCore || blueGlow || greenGlow;
+}
+
+function isAdjacentToMask(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  mask: boolean[],
+): boolean {
+  return getNeighborIndexes(x, y, width, height).some((neighbor) => mask[neighbor]);
+}
+
+function isNearSourceGlow(
+  img: any,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): boolean {
+  const points = [y * width + x, ...getNeighborIndexes(x, y, width, height)];
+
+  for (const idx of points) {
+    const nx = idx % width;
+    const ny = Math.floor(idx / width);
+    const { r, g, b } = getPixelRgbFromJimp(img, nx, ny);
+    if (isSourceGlowPixel(r, g, b) || isLikelySaberOrGlowPixel(r, g, b)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function hasAdjacentProtectedSource(
@@ -949,6 +1001,358 @@ function findNearestRobeNeutralTarget(
   }
 
   return bestIndex;
+}
+
+function logRobeContaminationCounts(
+  label: string,
+  pixels: number[],
+  palette: PaletteLabEntry[],
+  img: any,
+  width: number,
+  height: number,
+  edgeMask: boolean[],
+  skinMask: boolean[],
+  faceFeatureMask: boolean[],
+  greenFaceInfluenceMask: boolean[],
+) {
+  let eligible = 0;
+  let contamination = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (
+        edgeMask[idx] ||
+        skinMask[idx] ||
+        faceFeatureMask[idx] ||
+        greenFaceInfluenceMask[idx] ||
+        isAdjacentToMask(x, y, width, height, greenFaceInfluenceMask) ||
+        isNearSourceGlow(img, x, y, width, height)
+      ) {
+        continue;
+      }
+
+      const entry = palette.find((item) => item.index === pixels[idx]);
+      if (!entry) continue;
+
+      eligible++;
+      if (isRobeOffFamilyContamination(entry)) {
+        contamination++;
+      }
+    }
+  }
+
+  console.log("ROBE_CONTAMINATION_COUNTS", label, {
+    eligible,
+    contamination,
+    contaminationPct:
+      eligible > 0 ? Number(((contamination / eligible) * 100).toFixed(2)) : 0,
+  });
+}
+
+function cleanupRobeContamination(
+  pixels: number[],
+  palette: PaletteLabEntry[],
+  img: any,
+  width: number,
+  height: number,
+  edgeMask: boolean[],
+  skinMask: boolean[],
+  faceFeatureMask: boolean[],
+  greenFaceInfluenceMask: boolean[],
+): number[] {
+  const result = [...pixels];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (
+        edgeMask[idx] ||
+        skinMask[idx] ||
+        faceFeatureMask[idx] ||
+        greenFaceInfluenceMask[idx] ||
+        isAdjacentToMask(x, y, width, height, greenFaceInfluenceMask) ||
+        isNearSourceGlow(img, x, y, width, height)
+      ) {
+        continue;
+      }
+
+      const currentEntry = palette.find((entry) => entry.index === result[idx]);
+      if (!currentEntry || !isRobeOffFamilyContamination(currentEntry)) continue;
+
+      const targetCounts = new Map<number, number>();
+      for (const neighbor of getNeighborIndexes(x, y, width, height)) {
+        if (
+          edgeMask[neighbor] ||
+          skinMask[neighbor] ||
+          faceFeatureMask[neighbor] ||
+          greenFaceInfluenceMask[neighbor]
+        ) {
+          continue;
+        }
+
+        const neighborEntry = palette.find((entry) => entry.index === result[neighbor]);
+        if (!neighborEntry || !isStableRobeTarget(neighborEntry)) continue;
+
+        targetCounts.set(
+          neighborEntry.index,
+          (targetCounts.get(neighborEntry.index) ?? 0) + 1,
+        );
+      }
+
+      let replacement: number | null = null;
+      let bestCount = 0;
+      for (const [color, count] of targetCounts.entries()) {
+        if (count > bestCount) {
+          replacement = color;
+          bestCount = count;
+        }
+      }
+
+      if (replacement !== null && bestCount >= ROBE_CONTAMINATION_NEIGHBOR_VOTES) {
+        result[idx] = replacement;
+      }
+    }
+  }
+
+  return result;
+}
+
+function isRobeTextureSourceColor(entry: PaletteLabEntry): boolean {
+  return ["Dark Brown", "Dark Bluish Gray", "Black Grey", "Black"].includes(
+    entry.color.name,
+  );
+}
+
+function findPaletteIndexByName(
+  palette: PaletteLabEntry[],
+  name: string,
+): number | null {
+  return palette.find((entry) => entry.color.name === name)?.index ?? null;
+}
+
+function getSourceLuminance(img: any, index: number, width: number): number {
+  const x = index % width;
+  const y = Math.floor(index / width);
+  const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+  return rgbToLab(r, g, b).l;
+}
+
+function getRobeTextureReplacement(
+  colorName: string,
+  sourceL: number,
+  regionMeanL: number,
+  palette: PaletteLabEntry[],
+): number | null {
+  const delta = sourceL - regionMeanL;
+
+  if (colorName === "Dark Brown") {
+    if (delta <= -ROBE_TEXTURE_MIN_LUMINANCE_DELTA) {
+      return findPaletteIndexByName(palette, sourceL < 28 ? "Black" : "Black Grey");
+    }
+    if (delta >= ROBE_TEXTURE_MIN_LUMINANCE_DELTA + 3) {
+      return findPaletteIndexByName(palette, "Reddish Brown");
+    }
+  }
+
+  if (colorName === "Dark Bluish Gray") {
+    if (delta >= ROBE_TEXTURE_MIN_LUMINANCE_DELTA) {
+      return findPaletteIndexByName(palette, "Light Bluish Gray");
+    }
+    if (delta <= -ROBE_TEXTURE_MIN_LUMINANCE_DELTA) {
+      return findPaletteIndexByName(palette, sourceL < 30 ? "Black" : "Black Grey");
+    }
+  }
+
+  if (colorName === "Black Grey") {
+    if (delta <= -ROBE_TEXTURE_MIN_LUMINANCE_DELTA) {
+      return findPaletteIndexByName(palette, "Black");
+    }
+  }
+
+  if (colorName === "Black" && delta >= ROBE_TEXTURE_MIN_LUMINANCE_DELTA + 2) {
+    return findPaletteIndexByName(palette, "Black Grey");
+  }
+
+  return null;
+}
+
+function countSameColorNeighbors(
+  pixels: number[],
+  index: number,
+  width: number,
+  height: number,
+): number {
+  const x = index % width;
+  const y = Math.floor(index / width);
+  const color = pixels[index];
+  let count = 0;
+
+  for (const neighbor of getNeighborIndexes(x, y, width, height)) {
+    if (pixels[neighbor] === color) count++;
+  }
+
+  return count;
+}
+
+function applyRobeRegionTexture(
+  pixels: number[],
+  palette: PaletteLabEntry[],
+  img: any,
+  width: number,
+  height: number,
+  edgeMask: boolean[],
+  skinMask: boolean[],
+  faceFeatureMask: boolean[],
+  greenFaceInfluenceMask: boolean[],
+): { pixels: number[]; changed: number; beforeLargest: Record<string, number>; afterLargest: Record<string, number> } {
+  const result = [...pixels];
+  const visited = new Array<boolean>(pixels.length).fill(false);
+  const beforeLargest: Record<string, number> = {};
+
+  const isEligible = (idx: number) => {
+    const x = idx % width;
+    const y = Math.floor(idx / width);
+    return !(
+      edgeMask[idx] ||
+      skinMask[idx] ||
+      faceFeatureMask[idx] ||
+      greenFaceInfluenceMask[idx] ||
+      isAdjacentToMask(x, y, width, height, greenFaceInfluenceMask) ||
+      isNearSourceGlow(img, x, y, width, height)
+    );
+  };
+
+  let changed = 0;
+
+  for (let start = 0; start < pixels.length; start++) {
+    if (visited[start] || !isEligible(start)) continue;
+
+    const entry = palette.find((item) => item.index === pixels[start]);
+    if (!entry || !isRobeTextureSourceColor(entry)) {
+      visited[start] = true;
+      continue;
+    }
+
+    const region: number[] = [];
+    const queue = [start];
+    visited[start] = true;
+
+    while (queue.length > 0) {
+      const idx = queue.pop()!;
+      region.push(idx);
+      const x = idx % width;
+      const y = Math.floor(idx / width);
+
+      for (const neighbor of getNeighborIndexes(x, y, width, height)) {
+        if (
+          visited[neighbor] ||
+          !isEligible(neighbor) ||
+          pixels[neighbor] !== pixels[start]
+        ) {
+          continue;
+        }
+
+        visited[neighbor] = true;
+        queue.push(neighbor);
+      }
+    }
+
+    beforeLargest[entry.color.name] = Math.max(
+      beforeLargest[entry.color.name] ?? 0,
+      region.length,
+    );
+
+    if (region.length < ROBE_TEXTURE_MIN_REGION_SIZE) continue;
+
+    const meanL =
+      region.reduce((total, idx) => total + getSourceLuminance(img, idx, width), 0) /
+      region.length;
+
+    const candidates = region
+      .map((idx) => {
+        const sourceL = getSourceLuminance(img, idx, width);
+        const replacement = getRobeTextureReplacement(
+          entry.color.name,
+          sourceL,
+          meanL,
+          palette,
+        );
+        return {
+          idx,
+          replacement,
+          strength: Math.abs(sourceL - meanL),
+          sameNeighbors: countSameColorNeighbors(pixels, idx, width, height),
+        };
+      })
+      .filter(
+        (item) =>
+          item.replacement !== null &&
+          item.sameNeighbors >= 5 &&
+          item.strength >= ROBE_TEXTURE_MIN_LUMINANCE_DELTA,
+      )
+      .sort((a, b) => b.strength - a.strength);
+
+    const limit = Math.max(
+      1,
+      Math.floor(region.length * ROBE_TEXTURE_MAX_REGION_RATIO),
+    );
+
+    for (const candidate of candidates.slice(0, limit)) {
+      result[candidate.idx] = candidate.replacement!;
+      changed++;
+    }
+  }
+
+  const afterLargest: Record<string, number> = {};
+  const afterVisited = new Array<boolean>(pixels.length).fill(false);
+
+  for (let start = 0; start < result.length; start++) {
+    if (afterVisited[start] || !isEligible(start)) continue;
+    const entry = palette.find((item) => item.index === result[start]);
+    if (!entry || !isRobeTextureSourceColor(entry)) {
+      afterVisited[start] = true;
+      continue;
+    }
+
+    const queue = [start];
+    afterVisited[start] = true;
+    let size = 0;
+
+    while (queue.length > 0) {
+      const idx = queue.pop()!;
+      size++;
+      const x = idx % width;
+      const y = Math.floor(idx / width);
+
+      for (const neighbor of getNeighborIndexes(x, y, width, height)) {
+        if (
+          afterVisited[neighbor] ||
+          !isEligible(neighbor) ||
+          result[neighbor] !== result[start]
+        ) {
+          continue;
+        }
+
+        afterVisited[neighbor] = true;
+        queue.push(neighbor);
+      }
+    }
+
+    afterLargest[entry.color.name] = Math.max(
+      afterLargest[entry.color.name] ?? 0,
+      size,
+    );
+  }
+
+  console.log("ROBE_TEXTURE_STATS", {
+    changed,
+    changedPct: Number(((changed / pixels.length) * 100).toFixed(2)),
+    beforeLargest,
+    afterLargest,
+  });
+
+  return { pixels: result, changed, beforeLargest, afterLargest };
 }
 
 function consolidateRobeBackgroundColors(
@@ -1537,13 +1941,56 @@ export async function processImage(
     greenFaceInfluenceMask,
   );
 
+  logRobeContaminationCounts(
+    "before_robe_contamination_cleanup",
+    faceRemappedPixels,
+    activePalette,
+    img,
+    targetW,
+    targetH,
+    edgeMask,
+    skinMask,
+    faceFeatureMask,
+    greenFaceInfluenceMask,
+  );
+
+  const shouldCleanRobeContamination =
+    greenSkinMask.filter(Boolean).length >= ROBE_CLEANUP_MIN_GREEN_SKIN_PIXELS;
+
+  const robeContaminationCleanedPixels = shouldCleanRobeContamination
+    ? cleanupRobeContamination(
+        faceRemappedPixels,
+        activePalette,
+        img,
+        targetW,
+        targetH,
+        edgeMask,
+        skinMask,
+        faceFeatureMask,
+        greenFaceInfluenceMask,
+      )
+    : faceRemappedPixels;
+
+  logRobeContaminationCounts(
+    "after_robe_contamination_cleanup",
+    robeContaminationCleanedPixels,
+    activePalette,
+    img,
+    targetW,
+    targetH,
+    edgeMask,
+    skinMask,
+    faceFeatureMask,
+    greenFaceInfluenceMask,
+  );
+
   console.log("MODE_USED", mode);
   console.log("THRESHOLD_USED", threshold);
   console.log("COLOR_COUNTS_BEFORE", Object.fromEntries(colorCountsBefore));
   console.log("PROTECT_EDGES", protectEdges);
   logFaceColorDiagnostics(
     "after_quantization",
-    faceRemappedPixels,
+    robeContaminationCleanedPixels,
     activePalette,
     skinMask,
     faceFeatureMask,
@@ -1551,7 +1998,7 @@ export async function processImage(
   );
 
   const smoothedPixels = applyAdaptiveSmoothing(
-    faceRemappedPixels,
+    robeContaminationCleanedPixels,
     targetW,
     targetH,
     activePalette,
@@ -1588,7 +2035,7 @@ export async function processImage(
     greenSkinMask,
   );
 
-  const finalPixels = consolidateRobeBackgroundColors(
+  const consolidatedPixels = consolidateRobeBackgroundColors(
     thresholdedPixels,
     targetW,
     targetH,
@@ -1598,6 +2045,28 @@ export async function processImage(
     skinMask,
     faceFeatureMask,
   );
+
+  const texturedFinalResult = shouldCleanRobeContamination
+    ? applyRobeRegionTexture(
+        consolidatedPixels,
+        activePalette,
+        img,
+        targetW,
+        targetH,
+        edgeMask,
+        skinMask,
+        faceFeatureMask,
+        greenFaceInfluenceMask,
+      )
+    : {
+        pixels: consolidatedPixels,
+        changed: 0,
+        beforeLargest: {},
+        afterLargest: {},
+      };
+
+  const finalPixels = texturedFinalResult.pixels;
+
   logFaceColorDiagnostics(
     "after_robe_background_consolidation",
     finalPixels,

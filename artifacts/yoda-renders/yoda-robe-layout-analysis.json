@@ -1,0 +1,472 @@
+{
+  "previewPath": "C:/Users/chadc/mosaic-maker/artifacts/yoda-renders/yoda-robe-contamination-guarded.png",
+  "robePixels": 9609,
+  "maskExcluded": 11895,
+  "familyPct": {
+    "black": {
+      "count": 4330,
+      "pct": 45.06
+    },
+    "gray": {
+      "count": 2270,
+      "pct": 23.62
+    },
+    "brown": {
+      "count": 2998,
+      "pct": 31.2
+    },
+    "green": {
+      "count": 10,
+      "pct": 0.1
+    },
+    "yellow": {
+      "count": 0,
+      "pct": 0
+    },
+    "cyan": {
+      "count": 0,
+      "pct": 0
+    },
+    "skin": {
+      "count": 1,
+      "pct": 0.01
+    },
+    "other": {
+      "count": 0,
+      "pct": 0
+    }
+  },
+  "regionSummary": [
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "total": 3195,
+      "pct": 33.25,
+      "regionCount": 30,
+      "largeRegions": 8,
+      "largest": 1181,
+      "topRegions": [
+        1181,
+        722,
+        364,
+        343,
+        166,
+        136,
+        118,
+        51
+      ]
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "total": 2996,
+      "pct": 31.18,
+      "regionCount": 29,
+      "largeRegions": 8,
+      "largest": 1556,
+      "topRegions": [
+        1556,
+        382,
+        298,
+        232,
+        186,
+        182,
+        39,
+        33
+      ]
+    },
+    {
+      "name": "Dark Bluish Gray",
+      "code": "199",
+      "family": "neutral",
+      "total": 1977,
+      "pct": 20.57,
+      "regionCount": 41,
+      "largeRegions": 4,
+      "largest": 1637,
+      "topRegions": [
+        1637,
+        138,
+        44,
+        25,
+        24,
+        11,
+        11,
+        9
+      ]
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "total": 1135,
+      "pct": 11.81,
+      "regionCount": 36,
+      "largeRegions": 7,
+      "largest": 680,
+      "topRegions": [
+        680,
+        75,
+        64,
+        62,
+        58,
+        41,
+        40,
+        11
+      ]
+    },
+    {
+      "name": "Light Bluish Gray",
+      "code": "194",
+      "family": "neutral",
+      "total": 226,
+      "pct": 2.35,
+      "regionCount": 9,
+      "largeRegions": 3,
+      "largest": 116,
+      "topRegions": [
+        116,
+        47,
+        40,
+        17,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "White",
+      "code": "01",
+      "family": "neutral",
+      "total": 67,
+      "pct": 0.7,
+      "regionCount": 1,
+      "largeRegions": 1,
+      "largest": 67,
+      "topRegions": [
+        67
+      ]
+    },
+    {
+      "name": "Dark Green",
+      "code": "141",
+      "family": "green",
+      "total": 9,
+      "pct": 0.09,
+      "regionCount": 3,
+      "largeRegions": 0,
+      "largest": 6,
+      "topRegions": [
+        6,
+        2,
+        1
+      ]
+    },
+    {
+      "name": "Reddish Brown",
+      "code": "192",
+      "family": "brown",
+      "total": 2,
+      "pct": 0.02,
+      "regionCount": 1,
+      "largeRegions": 0,
+      "largest": 2,
+      "topRegions": [
+        2
+      ]
+    },
+    {
+      "name": "Sand Green",
+      "code": "151",
+      "family": "green",
+      "total": 1,
+      "pct": 0.01,
+      "regionCount": 1,
+      "largeRegions": 0,
+      "largest": 1,
+      "topRegions": [
+        1
+      ]
+    },
+    {
+      "name": "Dark Tan",
+      "code": "138",
+      "family": "skin",
+      "total": 1,
+      "pct": 0.01,
+      "regionCount": 1,
+      "largeRegions": 0,
+      "largest": 1,
+      "topRegions": [
+        1
+      ]
+    }
+  ],
+  "largestRegions": [
+    {
+      "name": "Dark Bluish Gray",
+      "code": "199",
+      "family": "neutral",
+      "size": 1637,
+      "pct": 17.04,
+      "box": "x60-111 y99-167"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 1556,
+      "pct": 16.19,
+      "box": "x23-83 y140-191"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 1181,
+      "pct": 12.29,
+      "box": "x4-36 y0-55"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 722,
+      "pct": 7.51,
+      "box": "x56-111 y52-107"
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "size": 680,
+      "pct": 7.08,
+      "box": "x0-39 y155-191"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 382,
+      "pct": 3.98,
+      "box": "x82-111 y0-28"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 364,
+      "pct": 3.79,
+      "box": "x14-37 y80-107"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 343,
+      "pct": 3.57,
+      "box": "x0-17 y136-180"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 298,
+      "pct": 3.1,
+      "box": "x85-111 y152-172"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 232,
+      "pct": 2.41,
+      "box": "x71-99 y170-191"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 186,
+      "pct": 1.94,
+      "box": "x99-111 y54-75"
+    },
+    {
+      "name": "Dark Brown",
+      "code": "308",
+      "family": "brown",
+      "size": 182,
+      "pct": 1.89,
+      "box": "x37-69 y0-8"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 166,
+      "pct": 1.73,
+      "box": "x70-103 y166-187"
+    },
+    {
+      "name": "Dark Bluish Gray",
+      "code": "199",
+      "family": "neutral",
+      "size": 138,
+      "pct": 1.44,
+      "box": "x76-95 y21-44"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 136,
+      "pct": 1.42,
+      "box": "x18-27 y152-180"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 118,
+      "pct": 1.23,
+      "box": "x97-111 y36-46"
+    },
+    {
+      "name": "Light Bluish Gray",
+      "code": "194",
+      "family": "neutral",
+      "size": 116,
+      "pct": 1.21,
+      "box": "x69-88 y108-125"
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "size": 75,
+      "pct": 0.78,
+      "box": "x90-99 y40-52"
+    },
+    {
+      "name": "White",
+      "code": "01",
+      "family": "neutral",
+      "size": 67,
+      "pct": 0.7,
+      "box": "x0-3 y50-77"
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "size": 64,
+      "pct": 0.67,
+      "box": "x16-25 y138-149"
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "size": 62,
+      "pct": 0.65,
+      "box": "x0-12 y127-139"
+    },
+    {
+      "name": "Black Grey",
+      "code": "A29",
+      "family": "neutral",
+      "size": 58,
+      "pct": 0.6,
+      "box": "x60-79 y182-191"
+    },
+    {
+      "name": "Black",
+      "code": "26",
+      "family": "neutral",
+      "size": 51,
+      "pct": 0.53,
+      "box": "x56-67 y49-62"
+    },
+    {
+      "name": "Light Bluish Gray",
+      "code": "194",
+      "family": "neutral",
+      "size": 47,
+      "pct": 0.49,
+      "box": "x82-91 y20-27"
+    },
+    {
+      "name": "Dark Bluish Gray",
+      "code": "199",
+      "family": "neutral",
+      "size": 44,
+      "pct": 0.46,
+      "box": "x62-68 y63-73"
+    }
+  ],
+  "adjacency": [
+    {
+      "pair": "Black Grey (A29) <-> Black (26)",
+      "families": "neutral/neutral",
+      "count": 214
+    },
+    {
+      "pair": "Black Grey (A29) <-> Dark Brown (308)",
+      "families": "neutral/brown",
+      "count": 145
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Dark Brown (308)",
+      "families": "neutral/brown",
+      "count": 134
+    },
+    {
+      "pair": "Black (26) <-> Dark Brown (308)",
+      "families": "neutral/brown",
+      "count": 116
+    },
+    {
+      "pair": "Light Bluish Gray (194) <-> Dark Bluish Gray (199)",
+      "families": "neutral/neutral",
+      "count": 97
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Black Grey (A29)",
+      "families": "neutral/neutral",
+      "count": 68
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Black (26)",
+      "families": "neutral/neutral",
+      "count": 9
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Dark Green (141)",
+      "families": "neutral/green",
+      "count": 7
+    },
+    {
+      "pair": "Black Grey (A29) <-> Dark Green (141)",
+      "families": "neutral/green",
+      "count": 6
+    },
+    {
+      "pair": "Reddish Brown (192) <-> Dark Brown (308)",
+      "families": "brown/brown",
+      "count": 4
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Sand Green (151)",
+      "families": "neutral/green",
+      "count": 2
+    },
+    {
+      "pair": "Dark Bluish Gray (199) <-> Dark Tan (138)",
+      "families": "neutral/skin",
+      "count": 1
+    }
+  ]
+}
