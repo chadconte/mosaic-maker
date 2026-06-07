@@ -30,7 +30,7 @@ export const PALETTE: PaletteColor[] = [
   },
   {
     name: "Light Grey",
-    code: "light_grey",
+    code: "LG1",
     hex: "#D6D6D6",
     enabled: true,
     family: "neutral",

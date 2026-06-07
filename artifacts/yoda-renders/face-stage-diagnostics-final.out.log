@@ -1,0 +1,262 @@
+frontendDist: C:\Users\chadc\mosaic-maker\artifacts\mosaic-maker\dist\public
+frontendIndex exists: true
+[22:00:21.905] [32mINFO[39m (26144): [36mServer listening[39m
+    [35mport[39m: 3116
+MODE_USED balanced
+THRESHOLD_USED 10
+COLOR_COUNTS_BEFORE {
+  '0': 164,
+  '1': 7,
+  '2': 544,
+  '3': 3444,
+  '4': 1963,
+  '5': 4673,
+  '7': 83,
+  '11': 14,
+  '14': 417,
+  '15': 4311,
+  '24': 306,
+  '29': 2267,
+  '30': 286,
+  '31': 234,
+  '32': 469,
+  '33': 1663,
+  '34': 636,
+  '41': 15,
+  '43': 8
+}
+PROTECT_EDGES true
+FACE_STAGE_COUNTS after_quantization {
+  green: 5445,
+  gray: 1199,
+  brown: 1330,
+  black: 950,
+  other: 402,
+  total: 9326,
+  greenPct: 58.39,
+  grayPct: 12.86,
+  brownPct: 14.26,
+  blackPct: 10.19
+}
+FACE_STAGE_COUNTS after_adaptive_smoothing {
+  green: 5453,
+  gray: 1237,
+  brown: 1315,
+  black: 942,
+  other: 379,
+  total: 9326,
+  greenPct: 58.47,
+  grayPct: 13.26,
+  brownPct: 14.1,
+  blackPct: 10.1
+}
+COLOR_COUNTS_AFTER_THRESHOLD {
+  '0': 171,
+  '2': 338,
+  '3': 3739,
+  '4': 1913,
+  '5': 4654,
+  '7': 57,
+  '11': 14,
+  '14': 389,
+  '15': 4368,
+  '24': 302,
+  '29': 2282,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 626
+}
+INVALID_FINAL_COLORS []
+FACE_STAGE_COUNTS after_threshold {
+  green: 5462,
+  gray: 1240,
+  brown: 1315,
+  black: 942,
+  other: 367,
+  total: 9326,
+  greenPct: 58.57,
+  grayPct: 13.3,
+  brownPct: 14.1,
+  blackPct: 10.1
+}
+FACE_STAGE_COUNTS after_robe_background_consolidation {
+  green: 5462,
+  gray: 1240,
+  brown: 1315,
+  black: 942,
+  other: 367,
+  total: 9326,
+  greenPct: 58.57,
+  grayPct: 13.3,
+  brownPct: 14.1,
+  blackPct: 10.1
+}
+COLOR_COUNTS_AFTER {
+  '0': 171,
+  '2': 338,
+  '3': 3786,
+  '4': 1875,
+  '5': 4693,
+  '7': 57,
+  '11': 14,
+  '14': 389,
+  '15': 4366,
+  '24': 302,
+  '29': 2282,
+  '30': 270,
+  '31': 237,
+  '32': 475,
+  '33': 1669,
+  '34': 580
+}
+MODE_USED balanced
+THRESHOLD_USED 10
+COLOR_COUNTS_BEFORE {
+  '0': 390,
+  '1': 95,
+  '2': 812,
+  '3': 6665,
+  '4': 80,
+  '5': 1515,
+  '7': 588,
+  '9': 102,
+  '10': 487,
+  '11': 597,
+  '14': 4351,
+  '15': 2340,
+  '36': 99,
+  '38': 672,
+  '39': 347,
+  '40': 422,
+  '41': 1942
+}
+PROTECT_EDGES true
+FACE_STAGE_COUNTS after_quantization {
+  green: 0,
+  gray: 635,
+  brown: 2472,
+  black: 92,
+  other: 1804,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 12.69,
+  brownPct: 49.41,
+  blackPct: 1.84
+}
+FACE_STAGE_COUNTS after_adaptive_smoothing {
+  green: 0,
+  gray: 596,
+  brown: 2483,
+  black: 92,
+  other: 1832,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 11.91,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+COLOR_COUNTS_AFTER_THRESHOLD {
+  '0': 397,
+  '1': 79,
+  '2': 789,
+  '3': 6727,
+  '4': 66,
+  '5': 1462,
+  '7': 642,
+  '9': 88,
+  '10': 473,
+  '11': 597,
+  '14': 4368,
+  '15': 2401,
+  '36': 69,
+  '38': 649,
+  '39': 338,
+  '40': 445,
+  '41': 1914
+}
+INVALID_FINAL_COLORS []
+FACE_STAGE_COUNTS after_threshold {
+  green: 0,
+  gray: 596,
+  brown: 2483,
+  black: 92,
+  other: 1832,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 11.91,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+FACE_STAGE_COUNTS after_robe_background_consolidation {
+  green: 0,
+  gray: 596,
+  brown: 2483,
+  black: 92,
+  other: 1832,
+  total: 5003,
+  greenPct: 0,
+  grayPct: 11.91,
+  brownPct: 49.63,
+  blackPct: 1.84
+}
+COLOR_COUNTS_AFTER {
+  '0': 397,
+  '1': 79,
+  '2': 789,
+  '3': 6726,
+  '4': 52,
+  '5': 1477,
+  '7': 642,
+  '9': 88,
+  '10': 473,
+  '11': 597,
+  '14': 4368,
+  '15': 2401,
+  '36': 69,
+  '38': 649,
+  '39': 338,
+  '40': 445,
+  '41': 1914
+}
+[22:00:56.078] [32mINFO[39m (26144): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 913
+[22:00:56.159] [32mINFO[39m (26144): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "url": "/api/mosaic/download/4876d2c9-6e30-4c97-a50d-8421e03b2720/mosaic_preview.png"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2
+[22:00:56.992] [32mINFO[39m (26144): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/mosaic/generate"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 821
+[22:00:57.008] [32mINFO[39m (26144): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "url": "/api/mosaic/download/28e83c24-67e4-44f8-8fb6-c9aa964e8c41/mosaic_preview.png"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1

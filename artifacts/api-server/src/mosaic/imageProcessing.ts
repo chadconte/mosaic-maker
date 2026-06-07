@@ -51,8 +51,8 @@ const MODE_TUNING: Record<"detail" | "balanced" | "clean", ModeTuning> = {
     smoothingPasses: 3,
     nonSkinMajorityThreshold: 4,
     nonSkinLeadRequired: 2,
-    skinMajorityThreshold: 4,
-    skinLeadRequired: 2,
+    skinMajorityThreshold: 5,
+    skinLeadRequired: 3,
     outlierDistanceThreshold: 9,
     glowPenalty: 2,
   },
@@ -107,6 +107,100 @@ function countColors(pixels: number[]): Map<number, number> {
 
 function cloneCounts(counts: Map<number, number>): Map<number, number> {
   return new Map<number, number>(counts);
+}
+
+function buildGreenSkinMask(img: any, width: number, height: number): boolean[] {
+  const mask = new Array<boolean>(width * height).fill(false);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      mask[y * width + x] = isLikelyGreenSkinPixel(r, g, b);
+    }
+  }
+
+  return mask;
+}
+
+function buildGreenFaceInfluenceMask(
+  img: any,
+  width: number,
+  height: number,
+  greenSkinMask: boolean[],
+  faceFeatureMask: boolean[],
+): boolean[] {
+  const mask = [...greenSkinMask];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (greenSkinMask[idx]) continue;
+
+      const adjacentToGreenSkin = getNeighborIndexes(x, y, width, height).some(
+        (neighbor) => greenSkinMask[neighbor],
+      );
+      if (!adjacentToGreenSkin) continue;
+
+      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      const lab = rgbToLab(r, g, b);
+
+      if (
+        faceFeatureMask[idx] ||
+        (lab.l <= 45 && !isLikelySaberOrGlowPixel(r, g, b))
+      ) {
+        mask[idx] = true;
+      }
+    }
+  }
+
+  return mask;
+}
+
+function paletteFaceFamilyBucket(entry: PaletteLabEntry): string {
+  if (entry.color.family === "green") return "green";
+  if (entry.color.family === "brown") return "brown";
+  if (entry.color.name.includes("Black")) return "black";
+  if (entry.color.family === "neutral") return "gray";
+  return "other";
+}
+
+function logFaceColorDiagnostics(
+  label: string,
+  pixels: number[],
+  palette: PaletteLabEntry[],
+  skinMask: boolean[],
+  faceFeatureMask: boolean[],
+  greenSkinMask: boolean[],
+) {
+  const counts = {
+    green: 0,
+    gray: 0,
+    brown: 0,
+    black: 0,
+    other: 0,
+    total: 0,
+  };
+
+  for (let idx = 0; idx < pixels.length; idx++) {
+    if (!skinMask[idx] && !faceFeatureMask[idx] && !greenSkinMask[idx]) continue;
+
+    const entry = palette.find((item) => item.index === pixels[idx]);
+    if (!entry) continue;
+
+    counts[paletteFaceFamilyBucket(entry) as keyof typeof counts]++;
+    counts.total++;
+  }
+
+  const pct = (count: number) =>
+    counts.total > 0 ? Number(((count / counts.total) * 100).toFixed(2)) : 0;
+
+  console.log("FACE_STAGE_COUNTS", label, {
+    ...counts,
+    greenPct: pct(counts.green),
+    grayPct: pct(counts.gray),
+    brownPct: pct(counts.brown),
+    blackPct: pct(counts.black),
+  });
 }
 
 function getPixelRgbFromJimp(img: any, x: number, y: number) {
@@ -172,6 +266,33 @@ function isLikelySkinPixel(r: number, g: number, b: number): boolean {
   return classicRgbRule && hsvRule;
 }
 
+function isLikelySaberOrGlowPixel(r: number, g: number, b: number): boolean {
+  const { h, s, v } = rgbToHsv(r, g, b);
+  const lab = rgbToLab(r, g, b);
+
+  const brightCore = lab.l >= 78 && lab.b <= -4 && b >= r - 16 && g >= r - 20;
+  const blueGlow = h >= 175 && h <= 225 && s >= 0.32 && v >= 0.5 && b > r + 14;
+  const greenGlow =
+    h >= 78 && h <= 138 && s >= 0.52 && v >= 0.78 && g > r + 34 && g > b + 22;
+
+  return brightCore || blueGlow || greenGlow;
+}
+
+function isLikelyGreenSkinPixel(r: number, g: number, b: number): boolean {
+  if (isLikelySaberOrGlowPixel(r, g, b)) return false;
+
+  const { h, s, v } = rgbToHsv(r, g, b);
+  const lab = rgbToLab(r, g, b);
+
+  const greenHue = h >= 48 && h <= 145;
+  const saturatedEnough = s >= 0.18;
+  const visibleEnough = v >= 0.16;
+  const greenLabBias = lab.a <= -3 || lab.b >= 8;
+  const notGrayRobe = s >= 0.28 || (lab.a <= -8 && lab.l >= 22);
+
+  return greenHue && saturatedEnough && visibleEnough && greenLabBias && notGrayRobe;
+}
+
 function weightedDistanceForSkin(pixelLab: LAB, entry: PaletteLabEntry): number {
   let d = labDistance(pixelLab, entry.lab);
   const family = entry.color.family;
@@ -223,6 +344,46 @@ function weightedDistanceForSkin(pixelLab: LAB, entry: PaletteLabEntry): number 
   return d;
 }
 
+function weightedDistanceForGreenSkin(
+  pixelLab: LAB,
+  entry: PaletteLabEntry,
+): number {
+  let d = labDistance(pixelLab, entry.lab);
+  const family = entry.color.family;
+  const isDeepShadow = pixelLab.l <= 25;
+
+  if (family === "green") {
+    d *= 0.58;
+  }
+
+  if (family === "yellow") {
+    d *= pixelLab.l >= 45 ? 0.82 : 1.05;
+  }
+
+  if (family === "neutral") {
+    if (isDeepShadow && entry.lab.l <= 32) {
+      d *= 0.85;
+    } else {
+      d += pixelLab.l > 25 ? 32 : 12;
+    }
+  }
+
+  if (family === "brown") {
+    d += pixelLab.l > 25 ? 38 : 16;
+  }
+
+  if (
+    family === "red" ||
+    family === "orange" ||
+    family === "skin" ||
+    family === "metallic"
+  ) {
+    d += pixelLab.l > 25 ? 34 : 14;
+  }
+
+  return d;
+}
+
 function findNearestPaletteEntryWeightedForSkin(
   pixelLab: LAB,
   activePalette: PaletteLabEntry[],
@@ -239,6 +400,85 @@ function findNearestPaletteEntryWeightedForSkin(
   }
 
   return best;
+}
+
+function findNearestPaletteEntryWeightedForGreenSkin(
+  pixelLab: LAB,
+  activePalette: PaletteLabEntry[],
+): PaletteLabEntry {
+  let minDist = Infinity;
+  let best = activePalette[0];
+
+  for (const entry of activePalette) {
+    const d = weightedDistanceForGreenSkin(pixelLab, entry);
+    if (d < minDist) {
+      minDist = d;
+      best = entry;
+    }
+  }
+
+  return best;
+}
+
+function findNearestGreenFaceReplacement(
+  pixelLab: LAB,
+  activePalette: PaletteLabEntry[],
+): PaletteLabEntry | null {
+  let minDist = Infinity;
+  let best: PaletteLabEntry | null = null;
+  const allowYellow = pixelLab.l >= 42;
+
+  for (const entry of activePalette) {
+    const family = entry.color.family;
+    if (family !== "green" && !(allowYellow && family === "yellow")) continue;
+
+    let d = labDistance(pixelLab, entry.lab);
+    if (pixelLab.l <= 35 && entry.color.name === "Dark Green") {
+      d *= 0.7;
+    }
+
+    if (d < minDist) {
+      minDist = d;
+      best = entry;
+    }
+  }
+
+  return best;
+}
+
+function remapGreenFaceInfluencePixels(
+  pixels: number[],
+  img: any,
+  width: number,
+  height: number,
+  palette: PaletteLabEntry[],
+  greenFaceInfluenceMask: boolean[],
+): number[] {
+  const result = [...pixels];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!greenFaceInfluenceMask[idx]) continue;
+
+      const currentEntry = palette.find((entry) => entry.index === result[idx]);
+      if (!currentEntry) continue;
+
+      const bucket = paletteFaceFamilyBucket(currentEntry);
+      if (bucket !== "gray" && bucket !== "brown" && bucket !== "black") continue;
+
+      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      const sourceLab = rgbToLab(r, g, b);
+      if (bucket === "black" && sourceLab.l <= 22) continue;
+
+      const replacement = findNearestGreenFaceReplacement(sourceLab, palette);
+      if (replacement) {
+        result[idx] = replacement.index;
+      }
+    }
+  }
+
+  return result;
 }
 
 function isGlowFamily(entry: PaletteLabEntry): boolean {
@@ -299,6 +539,13 @@ function findNearestColorIndexFamilyAware(
 
   if (isLikelySkinPixel(r, g, b)) {
     return findNearestPaletteEntryWeightedForSkin(pixelLab, activePalette).index;
+  }
+
+  if (isLikelyGreenSkinPixel(r, g, b)) {
+    return findNearestPaletteEntryWeightedForGreenSkin(
+      pixelLab,
+      activePalette,
+    ).index;
   }
 
   let minDist = Infinity;
@@ -406,7 +653,7 @@ function buildSkinProtectionMask(
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const { r, g, b } = getPixelRgbFromJimp(img, x, y);
-      if (isLikelySkinPixel(r, g, b)) {
+      if (isLikelySkinPixel(r, g, b) || isLikelyGreenSkinPixel(r, g, b)) {
         base[y * width + x] = true;
       }
     }
@@ -623,6 +870,177 @@ function applyAdaptiveSmoothing(
   return result;
 }
 
+function isRobeBackgroundFamily(entry: PaletteLabEntry): boolean {
+  return (
+    entry.color.family === "neutral" ||
+    entry.color.family === "skin" ||
+    entry.color.family === "brown" ||
+    entry.color.family === "orange" ||
+    entry.color.family === "green"
+  );
+}
+
+function isRobeGreenContamination(entry: PaletteLabEntry): boolean {
+  return [
+    "Dark Green",
+    "Olive Green",
+    "Sand Green",
+    "Yellowish Green",
+    "Green",
+    "Bright Green",
+  ].includes(entry.color.name);
+}
+
+function isRobeNeutralTarget(entry: PaletteLabEntry): boolean {
+  return ["Dark Brown", "Dark Bluish Gray", "Black Grey"].includes(
+    entry.color.name,
+  );
+}
+
+function isSourceGlowPixel(r: number, g: number, b: number): boolean {
+  const { h, s, v } = rgbToHsv(r, g, b);
+  const lab = rgbToLab(r, g, b);
+
+  const brightCore = lab.l >= 74 && lab.b <= -3 && b >= r - 20 && g >= r - 24;
+  const blueGlow = h >= 175 && h <= 225 && s >= 0.24 && v >= 0.42 && b > r + 10;
+  const greenGlow =
+    h >= 75 && h <= 145 && s >= 0.42 && v >= 0.68 && g > r + 24 && g > b + 12;
+
+  return brightCore || blueGlow || greenGlow;
+}
+
+function hasAdjacentProtectedSource(
+  img: any,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  skinMask: boolean[],
+): boolean {
+  for (const neighbor of getNeighborIndexes(x, y, width, height)) {
+    if (skinMask[neighbor]) return true;
+
+    const nx = neighbor % width;
+    const ny = Math.floor(neighbor / width);
+    const { r, g, b } = getPixelRgbFromJimp(img, nx, ny);
+    if (isSourceGlowPixel(r, g, b)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function findNearestRobeNeutralTarget(
+  currentEntry: PaletteLabEntry,
+  palette: PaletteLabEntry[],
+): number | null {
+  let bestIndex: number | null = null;
+  let bestDistance = Infinity;
+
+  for (const entry of palette) {
+    if (!isRobeNeutralTarget(entry)) continue;
+
+    const distance = labDistance(currentEntry.lab, entry.lab);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = entry.index;
+    }
+  }
+
+  return bestIndex;
+}
+
+function consolidateRobeBackgroundColors(
+  pixels: number[],
+  width: number,
+  height: number,
+  palette: PaletteLabEntry[],
+  img: any,
+  edgeMask: boolean[],
+  skinMask: boolean[],
+  faceFeatureMask: boolean[],
+): number[] {
+  const result = [...pixels];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (edgeMask[idx] || skinMask[idx] || faceFeatureMask[idx]) continue;
+
+      const currentEntry = palette.find((entry) => entry.index === result[idx]);
+      if (!currentEntry || !isRobeBackgroundFamily(currentEntry)) continue;
+
+      const neighbors = getNeighborIndexes(x, y, width, height);
+      let sameNeighbors = 0;
+      const counts = new Map<number, number>();
+      const robeNeutralCounts = new Map<number, number>();
+
+      for (const neighbor of neighbors) {
+        if (edgeMask[neighbor] || skinMask[neighbor] || faceFeatureMask[neighbor]) {
+          continue;
+        }
+
+        const neighborColor = result[neighbor];
+        if (neighborColor === result[idx]) sameNeighbors++;
+
+        const neighborEntry = palette.find((entry) => entry.index === neighborColor);
+        if (!neighborEntry || !isRobeBackgroundFamily(neighborEntry)) continue;
+        counts.set(neighborColor, (counts.get(neighborColor) ?? 0) + 1);
+
+        if (isRobeNeutralTarget(neighborEntry)) {
+          robeNeutralCounts.set(
+            neighborColor,
+            (robeNeutralCounts.get(neighborColor) ?? 0) + 1,
+          );
+        }
+      }
+
+      if (
+        isRobeGreenContamination(currentEntry) &&
+        !hasAdjacentProtectedSource(img, x, y, width, height, skinMask)
+      ) {
+        let replacement = findNearestRobeNeutralTarget(currentEntry, palette);
+        let bestNeutralCount = 0;
+
+        for (const [color, count] of robeNeutralCounts.entries()) {
+          if (count > bestNeutralCount) {
+            replacement = color;
+            bestNeutralCount = count;
+          }
+        }
+
+        if (replacement !== null) {
+          result[idx] = replacement;
+          continue;
+        }
+      }
+
+      let bestColor = result[idx];
+      let bestCount = 0;
+      for (const [color, count] of counts.entries()) {
+        if (count > bestCount) {
+          bestColor = color;
+          bestCount = count;
+        }
+      }
+
+      const bestEntry = palette.find((entry) => entry.index === bestColor);
+      if (!bestEntry) continue;
+
+      const maxDistance = sameNeighbors <= 1 ? 18 : 10;
+      const requiredNeighborVotes = sameNeighbors <= 1 ? 3 : 5;
+
+      if (bestColor === result[idx] || bestCount < requiredNeighborVotes) continue;
+      if (labDistance(currentEntry.lab, bestEntry.lab) > maxDistance) continue;
+
+      result[idx] = bestColor;
+    }
+  }
+
+  return result;
+}
+
 function diffuseError(
   imgLabs: LAB[],
   width: number,
@@ -670,10 +1088,14 @@ function quantizeWithDithering(
 ): number[] {
   const pixels: number[] = new Array(width * height);
   const labs: LAB[] = new Array(width * height);
+  const sourceRgbs: Array<{ r: number; g: number; b: number }> = new Array(
+    width * height,
+  );
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      sourceRgbs[y * width + x] = { r, g, b };
       labs[y * width + x] = rgbToLab(r, g, b);
     }
   }
@@ -692,6 +1114,7 @@ function quantizeWithDithering(
         lab,
         palette,
         tuning,
+        sourceRgbs[idx],
       );
 
       pixels[idx] = mappedIndex;
@@ -721,7 +1144,18 @@ function findNearestColorIndexFamilyAwareLab(
   pixelLab: LAB,
   activePalette: PaletteLabEntry[],
   tuning: ModeTuning,
+  sourceRgb?: { r: number; g: number; b: number },
 ): number {
+  if (
+    sourceRgb &&
+    isLikelyGreenSkinPixel(sourceRgb.r, sourceRgb.g, sourceRgb.b)
+  ) {
+    return findNearestPaletteEntryWeightedForGreenSkin(
+      pixelLab,
+      activePalette,
+    ).index;
+  }
+
   let minDist = Infinity;
   let best = activePalette[0];
 
@@ -1076,17 +1510,48 @@ export async function processImage(
     ? buildSkinProtectionMask(img, targetW, targetH)
     : new Array<boolean>(targetW * targetH).fill(false);
 
+  const greenSkinMask = protectEdges
+    ? buildGreenSkinMask(img, targetW, targetH)
+    : new Array<boolean>(targetW * targetH).fill(false);
+
   const faceFeatureMask = protectEdges
     ? buildFaceFeatureMask(img, targetW, targetH, skinMask)
     : new Array<boolean>(targetW * targetH).fill(false);
+
+  const greenFaceInfluenceMask = protectEdges
+    ? buildGreenFaceInfluenceMask(
+        img,
+        targetW,
+        targetH,
+        greenSkinMask,
+        faceFeatureMask,
+      )
+    : new Array<boolean>(targetW * targetH).fill(false);
+
+  const faceRemappedPixels = remapGreenFaceInfluencePixels(
+    quantizedPixels,
+    img,
+    targetW,
+    targetH,
+    activePalette,
+    greenFaceInfluenceMask,
+  );
 
   console.log("MODE_USED", mode);
   console.log("THRESHOLD_USED", threshold);
   console.log("COLOR_COUNTS_BEFORE", Object.fromEntries(colorCountsBefore));
   console.log("PROTECT_EDGES", protectEdges);
+  logFaceColorDiagnostics(
+    "after_quantization",
+    faceRemappedPixels,
+    activePalette,
+    skinMask,
+    faceFeatureMask,
+    greenSkinMask,
+  );
 
   const smoothedPixels = applyAdaptiveSmoothing(
-    quantizedPixels,
+    faceRemappedPixels,
     targetW,
     targetH,
     activePalette,
@@ -1095,8 +1560,16 @@ export async function processImage(
     faceFeatureMask,
     tuning,
   );
+  logFaceColorDiagnostics(
+    "after_adaptive_smoothing",
+    smoothedPixels,
+    activePalette,
+    skinMask,
+    faceFeatureMask,
+    greenSkinMask,
+  );
 
-  const finalPixels = applyThreshold(
+  const thresholdedPixels = applyThreshold(
     smoothedPixels,
     threshold,
     activePalette,
@@ -1105,6 +1578,33 @@ export async function processImage(
     protectEdges,
     edgeMask,
     faceFeatureMask,
+  );
+  logFaceColorDiagnostics(
+    "after_threshold",
+    thresholdedPixels,
+    activePalette,
+    skinMask,
+    faceFeatureMask,
+    greenSkinMask,
+  );
+
+  const finalPixels = consolidateRobeBackgroundColors(
+    thresholdedPixels,
+    targetW,
+    targetH,
+    activePalette,
+    img,
+    edgeMask,
+    skinMask,
+    faceFeatureMask,
+  );
+  logFaceColorDiagnostics(
+    "after_robe_background_consolidation",
+    finalPixels,
+    activePalette,
+    skinMask,
+    faceFeatureMask,
+    greenSkinMask,
   );
 
   const colorCountsAfter = countColors(finalPixels);

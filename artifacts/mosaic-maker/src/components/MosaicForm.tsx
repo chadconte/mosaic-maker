@@ -1,6 +1,7 @@
 // artifacts/mosaic-maker/src/components/MosaicForm.tsx
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Area } from "react-easy-crop";
 import {
   UploadCloud,
   Image as ImageIcon,
@@ -13,6 +14,8 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { PALETTE, type PaletteColor } from "../lib/palette";
+import { getCroppedImageFile } from "../lib/cropImage";
+import { MosaicImageCropper } from "./MosaicImageCropper";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -39,6 +42,10 @@ const DEFAULT_THRESHOLD = 10;
 export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const croppedAreaPixelsRef = useRef<Area | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const [isExportingCrop, setIsExportingCrop] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const [baseplateSize, setBaseplateSize] = useState<number>(32);
@@ -50,27 +57,89 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const [protectEdges, setProtectEdges] = useState(true);
   const [palette, setPalette] = useState<PaletteColor[]>(PALETTE);
 
-  const handleFile = useCallback((selectedFile: File) => {
-    if (selectedFile && selectedFile.type.startsWith("image/")) {
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+  const handleCropAreaChange = useCallback((area: Area | null) => {
+    croppedAreaPixelsRef.current = area;
+    setCroppedAreaPixels(area);
+    if (import.meta.env.DEV && area) {
+      console.debug("[mosaic-crop] croppedAreaPixels", area);
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
+  const handleFile = useCallback((selectedFile: File) => {
+    if (selectedFile && selectedFile.type.startsWith("image/")) {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      const nextPreview = URL.createObjectURL(selectedFile);
+      previewUrlRef.current = nextPreview;
+      setFile(selectedFile);
+      setPreview(nextPreview);
+      croppedAreaPixelsRef.current = null;
+      setCroppedAreaPixels(null);
+    }
+  }, []);
 
-    onSubmit({
-      image: file,
-      baseplateSize,
-      columns,
-      rows,
-      mode,
-      threshold,
-      protectEdges,
-      palette,
-    });
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    croppedAreaPixelsRef.current = null;
+    setCroppedAreaPixels(null);
+  }, [columns, rows]);
+
+  const cropAspect = columns / rows;
+  const mosaicCropLabel = `${baseplateSize * columns} × ${baseplateSize * rows} studs`;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const pixelCrop = croppedAreaPixelsRef.current;
+    if (!file || !pixelCrop) return;
+
+    setIsExportingCrop(true);
+    const sourceUrl = URL.createObjectURL(file);
+    try {
+      if (import.meta.env.DEV) {
+        console.debug("[mosaic-crop] exporting crop", {
+          originalFile: { name: file.name, size: file.size, type: file.type },
+          pixelCrop,
+        });
+      }
+
+      const croppedImage = await getCroppedImageFile(
+        sourceUrl,
+        pixelCrop,
+        file,
+      );
+
+      if (import.meta.env.DEV) {
+        console.debug("[mosaic-crop] cropped file ready", {
+          name: croppedImage.name,
+          size: croppedImage.size,
+          type: croppedImage.type,
+        });
+      }
+
+      onSubmit({
+        image: croppedImage,
+        baseplateSize,
+        columns,
+        rows,
+        mode,
+        threshold,
+        protectEdges,
+        palette,
+      });
+    } catch (error) {
+      console.error("Failed to export crop:", error);
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+      setIsExportingCrop(false);
+    }
   };
 
   const togglePaletteColor = (code: string) => {
@@ -118,41 +187,28 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
             Source Image
           </label>
 
-          <div
-            className={cn(
-              "relative w-full h-56 sm:h-72 rounded-2xl border-2 border-dashed transition-all duration-200 ease-out flex flex-col items-center justify-center overflow-hidden group cursor-pointer",
-              isDragging
-                ? "border-primary bg-primary/5"
-                : "border-border bg-white hover:border-primary/50 hover:bg-zinc-50",
-            )}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-              if (e.dataTransfer.files?.[0]) {
-                handleFile(e.dataTransfer.files[0]);
-              }
-            }}
-            onClick={() => document.getElementById("file-upload")?.click()}
-          >
-            {preview ? (
-              <>
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="px-4 py-2 rounded-xl bg-white/90 text-sm font-medium text-foreground shadow-sm">
-                    Click to change image
-                  </div>
-                </div>
-              </>
-            ) : (
+          {!file ? (
+            <div
+              className={cn(
+                "relative w-full h-56 sm:h-72 rounded-2xl border-2 border-dashed transition-all duration-200 ease-out flex flex-col items-center justify-center overflow-hidden cursor-pointer",
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-white hover:border-primary/50 hover:bg-zinc-50",
+              )}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files?.[0]) {
+                  handleFile(e.dataTransfer.files[0]);
+                }
+              }}
+              onClick={() => document.getElementById("file-upload")?.click()}
+            >
               <div className="flex flex-col items-center justify-center text-center px-6">
                 <UploadCloud className="w-10 h-10 text-primary mb-3" />
                 <p className="text-base font-semibold text-foreground">
@@ -162,20 +218,45 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
                   or click to browse from your computer
                 </p>
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-white overflow-hidden shadow-inner">
+              {preview && (
+                <MosaicImageCropper
+                  key={`${columns}-${rows}`}
+                  imageSrc={preview}
+                  aspect={cropAspect}
+                  mosaicLabel={mosaicCropLabel}
+                  onCropAreaChange={handleCropAreaChange}
+                  className="p-4 sm:p-5"
+                />
+              )}
+              <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 bg-zinc-50">
+                <p className="text-xs text-muted-foreground truncate">
+                  {file.name}
+                </p>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground hover:bg-zinc-50"
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                >
+                  Change image
+                </button>
+              </div>
+            </div>
+          )}
 
-            <input
-              id="file-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  handleFile(e.target.files[0]);
-                }
-              }}
-            />
-          </div>
+          <input
+            id="file-upload"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                handleFile(e.target.files[0]);
+              }
+            }}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1fr)_340px] items-start">
@@ -376,15 +457,29 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
 
             <button
               type="submit"
-              disabled={isPending || !file || enabledCount === 0}
+              disabled={
+                isPending ||
+                isExportingCrop ||
+                !file ||
+                !croppedAreaPixels ||
+                enabledCount === 0
+              }
               className={cn(
                 "w-full py-4 rounded-2xl font-semibold text-white transition-all shadow-sm",
-                isPending || !file || enabledCount === 0
+                isPending ||
+                  isExportingCrop ||
+                  !file ||
+                  !croppedAreaPixels ||
+                  enabledCount === 0
                   ? "bg-zinc-400 cursor-not-allowed"
                   : "bg-primary hover:opacity-90 active:scale-[0.99]",
               )}
             >
-              {isPending ? "Generating Pattern..." : "Generate Mosaic"}
+              {isPending
+                ? "Generating Pattern..."
+                : isExportingCrop
+                  ? "Preparing Crop..."
+                  : "Generate Mosaic"}
             </button>
           </div>
 

@@ -29,6 +29,16 @@ export default function Home() {
   const [result, setResult] = useState<MosaicResult | null>(null);
 
   const handleSubmit = (data: MosaicFormData) => {
+    if (import.meta.env.DEV) {
+      console.debug("[mosaic-crop] submitting to API", {
+        image: {
+          name: data.image.name,
+          size: data.image.size,
+          type: data.image.type,
+        },
+      });
+    }
+
     generateMosaic(
       { data },
       {
