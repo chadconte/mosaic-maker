@@ -109,6 +109,10 @@ export const generateMosaic = async (
     formData.append("mode", generateMosaicBody.mode);
   }
 
+  if (generateMosaicBody.processingType !== undefined) {
+    formData.append("processingType", generateMosaicBody.processingType);
+  }
+
   if (generateMosaicBody.threshold !== undefined) {
     formData.append("threshold", generateMosaicBody.threshold.toString());
   }

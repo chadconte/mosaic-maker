@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ColorCount } from "./colorCount";
+import type { GenerateMosaicBodyProcessingType } from "./generateMosaicBodyProcessingType";
 import type { SectionInfo } from "./sectionInfo";
 
 export interface MosaicResult {
@@ -16,6 +17,7 @@ export interface MosaicResult {
   baseplateSize: number;
   columns: number;
   rows: number;
+  processingType: GenerateMosaicBodyProcessingType;
   colorsBefore: number;
   colorsAfter: number;
   colorCounts: ColorCount[];

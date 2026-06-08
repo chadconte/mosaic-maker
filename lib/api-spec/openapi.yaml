@@ -68,6 +68,14 @@ paths:
                     - clean
                   default: balanced
 
+                processingType:
+                  type: string
+                  description: Processing type
+                  enum:
+                    - photo
+                    - mosaic-import
+                  default: photo
+
                 protectEdges:
                   type: boolean
                   description: Protect high-contrast edges during cleanup
@@ -220,6 +228,11 @@ components:
           type: integer
         rows:
           type: integer
+        processingType:
+          type: string
+          enum:
+            - photo
+            - mosaic-import
         colorsBefore:
           type: integer
         colorsAfter:

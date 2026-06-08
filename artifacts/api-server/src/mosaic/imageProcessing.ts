@@ -1,4 +1,4 @@
-import { Jimp } from "jimp";
+import { Jimp, ResizeStrategy } from "jimp";
 import { PALETTE, PaletteColor, ColorFamily } from "./palette.js";
 import { hexToRgb, rgbToLab, labDistance, LAB } from "./colorUtils.js";
 
@@ -1849,6 +1849,91 @@ function applyThreshold(
   console.log("INVALID_FINAL_COLORS", invalidFinalColors);
 
   return forced;
+}
+
+function findNearestPaletteIndexByLab(
+  pixelLab: LAB,
+  activePalette: PaletteLabEntry[],
+): number {
+  let minDist = Infinity;
+  let best = activePalette[0];
+
+  for (const entry of activePalette) {
+    const distance = labDistance(pixelLab, entry.lab);
+    if (distance < minDist) {
+      minDist = distance;
+      best = entry;
+    }
+  }
+
+  return best.index;
+}
+
+export async function processImportedMosaicImage(
+  imageBuffer: Buffer,
+  baseplateSize: number,
+  columns: number,
+  rows: number,
+  options: Pick<ProcessImageOptions, "palette"> = {},
+): Promise<MosaicData> {
+  const targetW = baseplateSize * columns;
+  const targetH = baseplateSize * rows;
+  const aspectRatio = targetW / targetH;
+
+  const img = await Jimp.fromBuffer(imageBuffer);
+
+  const srcW = img.width;
+  const srcH = img.height;
+  const srcAspect = srcW / srcH;
+
+  let cropX = 0;
+  let cropY = 0;
+  let cropW = srcW;
+  let cropH = srcH;
+
+  if (srcAspect > aspectRatio) {
+    cropW = Math.round(srcH * aspectRatio);
+    cropX = Math.round((srcW - cropW) / 2);
+  } else if (srcAspect < aspectRatio) {
+    cropH = Math.round(srcW / aspectRatio);
+    cropY = Math.round((srcH - cropH) / 2);
+  }
+
+  img.crop({ x: cropX, y: cropY, w: cropW, h: cropH });
+  img.resize({
+    w: targetW,
+    h: targetH,
+    mode: ResizeStrategy.NEAREST_NEIGHBOR,
+  });
+
+  const activePalette = buildPaletteEntries(options.palette);
+
+  if (activePalette.length === 0) {
+    throw new Error("At least one palette color must be enabled.");
+  }
+
+  const pixels: number[] = new Array(targetW * targetH);
+
+  for (let y = 0; y < targetH; y++) {
+    for (let x = 0; x < targetW; x++) {
+      const { r, g, b } = getPixelRgbFromJimp(img, x, y);
+      pixels[y * targetW + x] = findNearestPaletteIndexByLab(
+        rgbToLab(r, g, b),
+        activePalette,
+      );
+    }
+  }
+
+  const colorCounts = countColors(pixels);
+
+  return {
+    width: targetW,
+    height: targetH,
+    pixels,
+    palette: activePalette.map((entry) => entry.color),
+    colorCountsBefore: cloneCounts(colorCounts),
+    colorCountsAfter: colorCounts,
+  };
 }
 
 export async function processImage(

@@ -1,7 +1,8 @@
 // artifacts/mosaic-maker/src/pages/Home.tsx
 
 import React, { useState } from "react";
-import { Layout } from "lucide-react";
+import { ImageDown, Layout } from "lucide-react";
+import { Link } from "wouter";
 import { useMosaicGenerator } from "../hooks/use-mosaic";
 import { MosaicForm } from "../components/MosaicForm";
 import { MosaicResults } from "../components/MosaicResults";
@@ -10,6 +11,7 @@ import type {
   MosaicResult,
   GenerateMosaicBodyPaletteItem,
   GenerateMosaicBodyMode,
+  GenerateMosaicBodyProcessingType,
 } from "@workspace/api-client-react";
 
 type MosaicFormData = {
@@ -18,6 +20,7 @@ type MosaicFormData = {
   columns: number;
   rows: number;
   mode: GenerateMosaicBodyMode;
+  processingType: GenerateMosaicBodyProcessingType;
   threshold: number;
   protectEdges: boolean;
   palette: GenerateMosaicBodyPaletteItem[];
@@ -67,18 +70,28 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-50">
       <div className="mx-auto max-w-[1720px] px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 rounded-3xl border border-border bg-white p-6 sm:p-8 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary/10 p-3">
-              <Layout className="h-7 w-7 text-primary" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-primary/10 p-3">
+                <Layout className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                  Mosaic Maker
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Professional Studio Tool
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Mosaic Maker
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Professional Studio Tool
-              </p>
-            </div>
+
+            <Link
+              href="/mosaic-adapter"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-zinc-50"
+            >
+              <ImageDown className="h-4 w-4" />
+              Mosaic Adapter
+            </Link>
           </div>
         </header>
 

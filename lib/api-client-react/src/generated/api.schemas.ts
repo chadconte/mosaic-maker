@@ -30,6 +30,7 @@ export interface MosaicResult {
   columns: number;
   rows: number;
   mode: GenerateMosaicBodyMode;
+  processingType: GenerateMosaicBodyProcessingType;
   thresholdUsed: number;
   protectEdges: boolean;
   colorsBefore: number;
@@ -53,6 +54,14 @@ export const GenerateMosaicBodyMode = {
   detail: "detail",
   balanced: "balanced",
   clean: "clean",
+} as const;
+
+export type GenerateMosaicBodyProcessingType =
+  (typeof GenerateMosaicBodyProcessingType)[keyof typeof GenerateMosaicBodyProcessingType];
+
+export const GenerateMosaicBodyProcessingType = {
+  photo: "photo",
+  mosaicImport: "mosaic-import",
 } as const;
 
 export type GenerateMosaicBodyPaletteItemFamily =
@@ -87,6 +96,7 @@ export type GenerateMosaicBody = {
   columns: number;
   rows: number;
   mode?: GenerateMosaicBodyMode;
+  processingType?: GenerateMosaicBodyProcessingType;
   threshold?: number;
   protectEdges?: boolean;
   palette?: GenerateMosaicBodyPaletteItem[];

@@ -1,2 +1,13 @@
 export * from "./generated/api";
-export * from "./generated/types";
+export type {
+  ColorCount,
+  ErrorResponse,
+  GenerateMosaicBody as GenerateMosaicBodyType,
+  GenerateMosaicBodyMode,
+  GenerateMosaicBodyPaletteItem,
+  GenerateMosaicBodyPaletteItemFamily,
+  GenerateMosaicBodyProcessingType,
+  HealthStatus,
+  MosaicResult,
+  SectionInfo,
+} from "./generated/types";

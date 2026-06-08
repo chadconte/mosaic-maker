@@ -22,6 +22,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 type DetailMode = "detail" | "balanced" | "clean";
+type ProcessingType = "photo" | "mosaic-import";
 
 interface MosaicFormProps {
   onSubmit: (data: {
@@ -29,6 +30,7 @@ interface MosaicFormProps {
     baseplateSize: number;
     columns: number;
     rows: number;
+    processingType: ProcessingType;
     mode: DetailMode;
     threshold: number;
     protectEdges: boolean;
@@ -53,6 +55,7 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
   const [rows, setRows] = useState<number>(8);
 
   const [mode, setMode] = useState<DetailMode>("balanced");
+  const [processingType, setProcessingType] = useState<ProcessingType>("photo");
   const [threshold, setThreshold] = useState<number>(DEFAULT_THRESHOLD);
   const [protectEdges, setProtectEdges] = useState(true);
   const [palette, setPalette] = useState<PaletteColor[]>(PALETTE);
@@ -129,6 +132,7 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
         baseplateSize,
         columns,
         rows,
+        processingType,
         mode,
         threshold,
         protectEdges,
@@ -342,6 +346,36 @@ export function MosaicForm({ onSubmit, isPending }: MosaicFormProps) {
                   <h3 className="text-lg font-semibold text-foreground">
                     Color Tuning
                   </h3>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-foreground flex justify-between items-center">
+                    <span>Processing Type</span>
+                    <span className="text-muted-foreground font-mono bg-zinc-100 px-2 py-0.5 rounded text-xs">
+                      {processingType === "photo" ? "Normal" : "Import"}
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      ["photo", "Photo Optimizer / Normal"],
+                      ["mosaic-import", "Mosaic Import / BrickMe Resize"],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setProcessingType(value as ProcessingType)}
+                        className={cn(
+                          "min-h-[46px] px-4 rounded-xl border text-center text-sm font-medium transition-all",
+                          processingType === value
+                            ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
+                            : "border-border bg-white text-muted-foreground hover:bg-zinc-50",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-3">

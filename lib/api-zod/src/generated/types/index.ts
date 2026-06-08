@@ -12,6 +12,7 @@ export * from "./generateMosaicBody";
 export * from "./generateMosaicBodyMode";
 export * from "./generateMosaicBodyPaletteItem";
 export * from "./generateMosaicBodyPaletteItemFamily";
+export * from "./generateMosaicBodyProcessingType";
 export * from "./healthStatus";
 export * from "./mosaicResult";
 export * from "./sectionInfo";

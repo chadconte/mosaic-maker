@@ -7,6 +7,7 @@
  */
 import type { GenerateMosaicBodyMode } from "./generateMosaicBodyMode";
 import type { GenerateMosaicBodyPaletteItem } from "./generateMosaicBodyPaletteItem";
+import type { GenerateMosaicBodyProcessingType } from "./generateMosaicBodyProcessingType";
 
 export type GenerateMosaicBody = {
   image: Blob;
@@ -18,6 +19,8 @@ export type GenerateMosaicBody = {
   rows: number;
   /** Detail mode */
   mode?: GenerateMosaicBodyMode;
+  /** Processing type */
+  processingType?: GenerateMosaicBodyProcessingType;
   /** Protect high-contrast edges during cleanup */
   protectEdges?: boolean;
   /** Full palette sent from frontend */

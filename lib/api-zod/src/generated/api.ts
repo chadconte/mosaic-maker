@@ -9,6 +9,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 export const generateMosaicBodyModeDefault = "balanced";
+export const generateMosaicBodyProcessingTypeDefault = "photo";
 export const generateMosaicBodyProtectEdgesDefault = true;
 
 export const GenerateMosaicBody = zod.object({
@@ -20,6 +21,10 @@ export const GenerateMosaicBody = zod.object({
     .enum(["detail", "balanced", "clean"])
     .default(generateMosaicBodyModeDefault)
     .describe("Detail mode"),
+  processingType: zod
+    .enum(["photo", "mosaic-import"])
+    .default(generateMosaicBodyProcessingTypeDefault)
+    .describe("Processing type"),
   threshold: zod
     .number()
     .int()
@@ -67,6 +72,7 @@ export const GenerateMosaicResponse = zod.object({
   columns: zod.number(),
   rows: zod.number(),
   mode: zod.enum(["detail", "balanced", "clean"]),
+  processingType: zod.enum(["photo", "mosaic-import"]),
   thresholdUsed: zod.number(),
   protectEdges: zod.boolean(),
   colorsBefore: zod.number(),

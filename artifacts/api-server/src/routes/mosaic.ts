@@ -6,7 +6,10 @@ import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
 import { v4 as uuidv4 } from "uuid";
-import { processImage } from "../mosaic/imageProcessing.js";
+import {
+  processImage,
+  processImportedMosaicImage,
+} from "../mosaic/imageProcessing.js";
 import { exportMosaic } from "../mosaic/exportUtils.js";
 import { PALETTE, type PaletteColor } from "../mosaic/palette.js";
 
@@ -18,6 +21,7 @@ const upload = multer({
 });
 
 type DetailMode = "detail" | "balanced" | "clean";
+type ProcessingType = "photo" | "mosaic-import";
 
 const DEFAULT_THRESHOLD = 10;
 
@@ -142,6 +146,9 @@ router.post(
       const columns = parseInt(String(req.body.columns), 10);
       const rows = parseInt(String(req.body.rows), 10);
       const mode = String(req.body.mode ?? "balanced") as DetailMode;
+      const processingType = String(
+        req.body.processingType ?? "photo",
+      ) as ProcessingType;
       const threshold = parseThreshold(req.body.threshold);
       const protectEdges =
         String(req.body.protectEdges ?? "true").toLowerCase() !== "false";
@@ -174,20 +181,36 @@ router.post(
         return;
       }
 
+      if (!["photo", "mosaic-import"].includes(processingType)) {
+        res.status(400).json({
+          error: "processingType must be photo or mosaic-import",
+        });
+        return;
+      }
+
       const sessionId = uuidv4();
 
-      const mosaicData = await processImage(
-        req.file.buffer,
-        baseplateSize,
-        columns,
-        rows,
-        threshold,
-        {
-          mode,
-          palette,
-          protectEdges,
-        },
-      );
+      const mosaicData =
+        processingType === "mosaic-import"
+          ? await processImportedMosaicImage(
+              req.file.buffer,
+              baseplateSize,
+              columns,
+              rows,
+              { palette },
+            )
+          : await processImage(
+              req.file.buffer,
+              baseplateSize,
+              columns,
+              rows,
+              threshold,
+              {
+                mode,
+                palette,
+                protectEdges,
+              },
+            );
 
       const exported = await exportMosaic(
         sessionId,
@@ -221,6 +244,7 @@ router.post(
         columns,
         rows,
         mode,
+        processingType,
         thresholdUsed: threshold,
         protectEdges,
         colorsBefore: mosaicData.colorCountsBefore.size,
