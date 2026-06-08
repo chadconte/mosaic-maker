@@ -6,10 +6,12 @@ type TargetSizePanelProps = {
   targetHeight: number;
   resizeMode: ResizeMode;
   showBaseplateGrid: boolean;
+  showStudGrid: boolean;
   onTargetWidthChange: (value: number) => void;
   onTargetHeightChange: (value: number) => void;
   onResizeModeChange: (value: ResizeMode) => void;
   onShowBaseplateGridChange: (value: boolean) => void;
+  onShowStudGridChange: (value: boolean) => void;
 };
 
 export function TargetSizePanel({
@@ -17,10 +19,12 @@ export function TargetSizePanel({
   targetHeight,
   resizeMode,
   showBaseplateGrid,
+  showStudGrid,
   onTargetWidthChange,
   onTargetHeightChange,
   onResizeModeChange,
   onShowBaseplateGridChange,
+  onShowStudGridChange,
 }: TargetSizePanelProps) {
   return (
     <section className="rounded-2xl border border-border bg-white p-5 shadow-sm">
@@ -71,6 +75,16 @@ export function TargetSizePanel({
           className="h-5 w-5 accent-primary"
         />
       </label>
+
+      <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-zinc-50 px-3 py-3 text-sm">
+        <span className="font-medium text-foreground">Show stud grid</span>
+        <input
+          type="checkbox"
+          checked={showStudGrid}
+          onChange={(event) => onShowStudGridChange(event.target.checked)}
+          className="h-5 w-5 accent-primary"
+        />
+      </label>
     </section>
   );
 }
@@ -97,4 +111,3 @@ function NumberField({
     </label>
   );
 }
-
